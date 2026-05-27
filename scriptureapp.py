@@ -183,267 +183,244 @@ st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;500;700;900&family=Noto+Sans+TC:wght@300;400;500;700&display=swap');
 
+/* ── 背景：米白 + 淡蓮花紋路 ── */
 html, body, [data-testid="stAppViewContainer"] {
-    background: #0E0B14 !important;
+    background: #F7F4EF !important;
 }
-[data-testid="stAppViewContainer"] > .main {
-    background: transparent;
-}
+[data-testid="stAppViewContainer"] > .main { background: transparent; }
 .block-container {
     padding-top: 0 !important;
     padding-bottom: 2rem !important;
     max-width: 600px !important;
 }
 
-/* tabs */
+/* ── tabs ── */
 [data-testid="stTabs"] { margin-top:0 !important; }
 [data-testid="stTabs"] > div:first-child {
     position: sticky; top: 0; z-index: 999;
-    background: #0E0B14;
+    background: #F7F4EF;
     padding: 10px 0 0;
-    border-bottom: 1px solid rgba(255,255,255,.08);
+    border-bottom: 1px solid #DDD5C8;
 }
 button[data-baseweb="tab"] {
     font-family: 'Noto Sans TC', sans-serif !important;
     font-size: 14px !important;
     font-weight: 500 !important;
-    color: rgba(255,255,255,.45) !important;
+    color: #9E8F80 !important;
     padding: 8px 16px !important;
     background: transparent !important;
 }
 button[data-baseweb="tab"][aria-selected="true"] {
-    color: #E9D5FF !important;
-    border-bottom: 2px solid #A78BFA !important;
+    color: #5B3A8C !important;
+    border-bottom: 2px solid #8B5CF6 !important;
     background: transparent !important;
 }
 [data-testid="stTabPanel"] { padding-top: 0 !important; }
 
-/* global text */
+/* ── 全域文字 ── */
 body, p, div, span, label {
     font-family: 'Noto Sans TC', sans-serif !important;
-    color: rgba(255,255,255,.85);
+    color: #3D2E22;
 }
 
-/* page header */
-.page-header {
-    text-align: center;
-    padding: 28px 0 18px;
-}
+/* ── 頁首 ── */
+.page-header { text-align: center; padding: 26px 0 16px; }
 .page-title {
     font-family: 'Noto Serif TC', serif;
-    font-size: 28px;
-    font-weight: 900;
+    font-size: 26px; font-weight: 900;
     letter-spacing: .12em;
-    background: linear-gradient(135deg, #E9D5FF 0%, #A78BFA 50%, #6EE7D8 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    color: #5B3A8C;
     margin-bottom: 4px;
 }
-.page-date {
-    font-size: 12px;
-    color: rgba(255,255,255,.35);
-    letter-spacing: .08em;
-}
+.page-date { font-size: 12px; color: #A89880; letter-spacing: .07em; }
 
-/* glass card */
+/* ── 卡片 ── */
 .gcard {
-    background: rgba(255,255,255,.055);
-    border: 1px solid rgba(255,255,255,.09);
+    background: #FFFFFF;
+    border: 1px solid #E8E0D5;
     border-radius: 16px;
     padding: 16px 18px;
     margin-bottom: 10px;
-    backdrop-filter: blur(12px);
+    box-shadow: 0 2px 10px rgba(91,58,140,.07);
 }
-.gcard-accent-p { border-left: 3px solid #A78BFA; }
-.gcard-accent-t { border-left: 3px solid #2DD4BF; }
+.gcard-accent-p { border-left: 3px solid #8B5CF6; }
+.gcard-accent-t { border-left: 3px solid #0D9488; }
 
-/* hero */
-.hero-icon { font-size: 36px; margin-bottom: 4px; }
+/* ── hero ── */
+.hero-icon { font-size: 34px; margin-bottom: 3px; }
 .hero-name {
     font-family: 'Noto Serif TC', serif;
-    font-size: 22px; font-weight: 900;
-    letter-spacing: .1em;
-    margin-bottom: 2px;
+    font-size: 21px; font-weight: 900;
+    letter-spacing: .1em; margin-bottom: 2px;
 }
-.hero-sub { font-size: 12px; color: rgba(255,255,255,.4); letter-spacing:.06em; }
+.hero-sub { font-size: 12px; color: #A89880; letter-spacing: .05em; }
 
-/* stat chips */
+/* ── stat chips ── */
 .stat-row { display:flex; gap:8px; margin:10px 0 4px; }
 .stat-chip {
     flex: 1;
-    background: rgba(255,255,255,.06);
-    border: 1px solid rgba(255,255,255,.08);
+    background: #F3EEE8;
+    border: 1px solid #E8E0D5;
     border-radius: 10px;
     padding: 8px 4px;
     text-align: center;
 }
 .stat-num {
     font-family: 'Noto Serif TC', serif;
-    font-size: 24px; font-weight: 700;
-    line-height: 1;
+    font-size: 24px; font-weight: 700; line-height: 1;
 }
-.stat-lbl { font-size: 11px; color: rgba(255,255,255,.4); margin-top:3px; }
+.stat-lbl { font-size: 11px; color: #A89880; margin-top: 3px; }
 
-/* progress */
-.prog-meta { display:flex; justify-content:space-between; font-size:11px; color:rgba(255,255,255,.35); margin-bottom:5px; }
+/* ── progress ── */
+.prog-meta { display:flex; justify-content:space-between; font-size:11px; color:#A89880; margin-bottom:5px; }
 .prog-track {
-    height: 4px;
-    background: rgba(255,255,255,.1);
-    border-radius: 2px;
+    height: 5px;
+    background: #EDE5D8;
+    border-radius: 3px;
     overflow: hidden;
     margin-bottom: 10px;
 }
-.prog-fill { height: 100%; border-radius: 2px; }
+.prog-fill { height: 100%; border-radius: 3px; }
 
-/* dot calendar */
-.cal-label { font-size: 12px; color:rgba(255,255,255,.35); margin-bottom:7px; letter-spacing:.04em; }
+/* ── dot calendar ── */
+.cal-label { font-size: 12px; color: #A89880; margin-bottom: 7px; letter-spacing: .04em; }
 .dot-grid { display:flex; flex-wrap:wrap; gap:4px; }
 .dot {
     width:26px; height:26px; border-radius:50%;
     display:flex; align-items:center; justify-content:center;
     font-size:10px; font-weight:600; font-family:'Noto Sans TC',sans-serif;
 }
-.dot-empty  { background:rgba(255,255,255,.06); color:rgba(255,255,255,.25); }
-.dot-done-p { background:#6D28D9; color:#EDE9FE; }
-.dot-done-t { background:#0F766E; color:#CCFBF1; }
-.dot-today-p { background:rgba(167,139,250,.18); color:#C4B5FD; border:1.5px solid #A78BFA; }
-.dot-today-t { background:rgba(45,212,191,.15); color:#6EE7B7; border:1.5px solid #2DD4BF; }
+.dot-empty   { background: #EDE5D8; color: #BFB0A0; }
+.dot-done-p  { background: #8B5CF6; color: #F5F0FF; }
+.dot-done-t  { background: #0D9488; color: #ECFDF5; }
+.dot-today-p { background: #F0EAFF; color: #6D28D9; border: 1.5px solid #8B5CF6; }
+.dot-today-t { background: #D1FAF5; color: #0F766E; border: 1.5px solid #0D9488; }
 
-/* scripture */
+/* ── scripture ── */
 .scripture-box {
-    background: rgba(0,0,0,.3);
-    border: 1px solid rgba(255,255,255,.07);
+    background: #FDFAF6;
+    border: 1px solid #E8E0D5;
     border-radius: 12px;
     padding: 16px 18px;
     max-height: 380px;
     overflow-y: auto;
     white-space: pre-wrap;
     font-size: 15px;
-    line-height: 1.6;
-    color: rgba(255,255,255,.7);
+    line-height: 1.65;
+    color: #4A3728;
     font-family: 'Noto Serif TC', serif;
     letter-spacing: .04em;
     scrollbar-width: thin;
-    scrollbar-color: rgba(167,139,250,.3) transparent;
+    scrollbar-color: #C4B5A0 transparent;
     margin-bottom: 10px;
 }
 
-/* counter area */
-.counter-wrap { text-align:center; padding: 6px 0 4px; }
-.count-big {
-    font-family: 'Noto Serif TC', serif;
-    font-size: 72px; font-weight:900; line-height:1;
-    letter-spacing:-.02em;
-}
-.count-sub { font-size:12px; color:rgba(255,255,255,.35); margin-top:3px; letter-spacing:.06em; }
-
-/* buttons */
+/* ── buttons ── */
 .stButton > button {
     font-family: 'Noto Sans TC', sans-serif !important;
-    border: 1px solid rgba(255,255,255,.12) !important;
+    border: 1px solid #DDD5C8 !important;
     border-radius: 10px !important;
     height: 44px !important;
     font-size: 15px !important;
     font-weight: 700 !important;
-    background: rgba(255,255,255,.07) !important;
-    color: rgba(255,255,255,.8) !important;
+    background: #FFFFFF !important;
+    color: #5B3A8C !important;
     transition: all .15s;
     width: 100%;
 }
 .stButton > button:hover {
-    background: rgba(255,255,255,.12) !important;
-    border-color: rgba(255,255,255,.22) !important;
+    background: #F3EEE8 !important;
+    border-color: #C4B5A0 !important;
 }
 .checkin-p .stButton > button {
-    background: linear-gradient(135deg,#6D28D9,#4C1D95) !important;
+    background: linear-gradient(135deg,#7C3AED,#5B21B6) !important;
     border: none !important; color: white !important;
     height: 50px !important; font-size: 16px !important;
-    box-shadow: 0 4px 20px rgba(109,40,217,.4) !important;
+    box-shadow: 0 4px 18px rgba(124,58,237,.28) !important;
 }
 .checkin-t .stButton > button {
-    background: linear-gradient(135deg,#0F766E,#134E4A) !important;
+    background: linear-gradient(135deg,#0D9488,#065F46) !important;
     border: none !important; color: white !important;
     height: 50px !important; font-size: 16px !important;
-    box-shadow: 0 4px 20px rgba(15,118,110,.4) !important;
+    box-shadow: 0 4px 18px rgba(13,148,136,.28) !important;
 }
 
-/* number input */
+/* ── number input ── */
 [data-testid="stNumberInput"] input {
     font-family: 'Noto Serif TC', serif !important;
-    font-size: 22px !important; font-weight:700 !important;
-    background: rgba(255,255,255,.06) !important;
-    border: 1px solid rgba(255,255,255,.1) !important;
+    font-size: 22px !important; font-weight: 700 !important;
+    background: #FDFAF6 !important;
+    border: 1px solid #DDD5C8 !important;
     border-radius: 10px !important;
-    color: rgba(255,255,255,.9) !important;
+    color: #3D2E22 !important;
     text-align: center;
 }
 [data-testid="stNumberInput"] button {
-    background: rgba(255,255,255,.07) !important;
+    background: #F3EEE8 !important;
     border-radius: 8px !important;
-    color: rgba(255,255,255,.6) !important;
+    color: #7A6050 !important;
 }
 
-/* expander */
+/* ── expander ── */
 [data-testid="stExpander"] {
-    background: rgba(255,255,255,.04) !important;
-    border: 1px solid rgba(255,255,255,.07) !important;
+    background: #FDFAF6 !important;
+    border: 1px solid #E8E0D5 !important;
     border-radius: 12px !important;
     margin-bottom: 10px;
 }
 [data-testid="stExpander"] summary {
     font-size: 13px !important;
-    color: rgba(255,255,255,.5) !important;
+    color: #9E8F80 !important;
     font-family: 'Noto Sans TC', sans-serif !important;
     padding: 10px 14px !important;
 }
 
-/* success */
+/* ── success alert ── */
 [data-testid="stAlert"] {
-    background: rgba(45,212,191,.12) !important;
-    border: 1px solid rgba(45,212,191,.25) !important;
+    background: #ECFDF5 !important;
+    border: 1px solid #6EE7B7 !important;
     border-radius: 10px !important;
-    color: #6EE7B7 !important;
+    color: #065F46 !important;
 }
 
-/* dataframe */
+/* ── dataframe ── */
 [data-testid="stDataFrame"] { border-radius:12px; overflow:hidden; }
 [data-testid="stDataFrame"] table { font-family:'Noto Sans TC',sans-serif; }
 
-/* selectbox / date input */
+/* ── selectbox / date input ── */
 [data-baseweb="select"] > div {
-    background: rgba(255,255,255,.07) !important;
-    border-color: rgba(255,255,255,.1) !important;
+    background: #FFFFFF !important;
+    border-color: #DDD5C8 !important;
     border-radius: 8px !important;
-    color: rgba(255,255,255,.8) !important;
+    color: #3D2E22 !important;
 }
 [data-testid="stDateInput"] input {
-    background: rgba(255,255,255,.07) !important;
-    border-color: rgba(255,255,255,.1) !important;
+    background: #FFFFFF !important;
+    border-color: #DDD5C8 !important;
     border-radius: 8px !important;
-    color: rgba(255,255,255,.8) !important;
+    color: #3D2E22 !important;
 }
 
-/* section title */
+/* ── section title ── */
 .sec-title {
     font-family: 'Noto Serif TC', serif;
-    font-size: 14px; font-weight:700;
-    color: rgba(255,255,255,.5);
-    letter-spacing: .1em;
+    font-size: 13px; font-weight: 700;
+    color: #A89880;
+    letter-spacing: .12em;
     margin: 14px 0 8px;
     text-transform: uppercase;
 }
 
-/* divider */
-.divider { border:none; border-top:1px solid rgba(255,255,255,.07); margin:14px 0; }
+/* ── divider ── */
+.divider { border:none; border-top:1px solid #E8E0D5; margin:14px 0; }
 
-/* download btn */
+/* ── download btn ── */
 .dl-btn .stDownloadButton > button {
-    background: rgba(255,255,255,.06) !important;
-    border: 1px solid rgba(255,255,255,.1) !important;
+    background: #FDFAF6 !important;
+    border: 1px solid #DDD5C8 !important;
     border-radius: 10px !important;
-    color: rgba(255,255,255,.6) !important;
-    font-size:13px !important;
+    color: #7A6050 !important;
+    font-size: 13px !important;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -470,8 +447,8 @@ for i, (name, info) in enumerate(PRACTICES.items()):
     accent_cls = "gcard-accent-t" if is_teal else "gcard-accent-p"
     dot_done = "dot-done-t" if is_teal else "dot-done-p"
     dot_today_cls = "dot-today-t" if is_teal else "dot-today-p"
-    prog_color = "#2DD4BF" if is_teal else "#A78BFA"
-    num_color  = "#2DD4BF" if is_teal else "#C4B5FD"
+    prog_color = "#0D9488" if is_teal else "#7C3AED"
+    num_color  = "#0D9488" if is_teal else "#6D28D9"
     checkin_cls = "checkin-t" if is_teal else "checkin-p"
 
     with tabs[i]:
