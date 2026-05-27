@@ -588,28 +588,20 @@ for i, (name, info) in enumerate(PRACTICES.items()):
         </div>
         """, unsafe_allow_html=True)
 
-        # ── scripture (manual toggle via session_state, no expander widget) ──
+        # ── 經文 toggle ──
         scr_key = f"scr_{name}"
         if scr_key not in st.session_state:
             st.session_state[scr_key] = False
 
         col_scr, _ = st.columns([3, 1])
         with col_scr:
-            label = "▲ 收起經文與迴向文" if st.session_state[scr_key] else "▼ 展開經文與迴向文"
+            label = "▲ 收起經文" if st.session_state[scr_key] else "▼ 展開經文"
             if st.button(label, key=f"scr_btn_{name}"):
                 st.session_state[scr_key] = not st.session_state[scr_key]
                 st.rerun()
 
         if st.session_state[scr_key]:
             st.markdown(f'<div class="scripture-box">{info["scripture"]}</div>', unsafe_allow_html=True)
-            st.markdown(f"""
-            <div class="dedication-box">
-              <div class="dedication-header">
-                <div class="dedication-header-line"></div>
-                <div class="dedication-header-text">🪔 迴向文</div>
-                <div class="dedication-header-line"></div>
-              </div>{info["dedication"]}</div>
-            """, unsafe_allow_html=True)
 
         # ── checkin card ──
         st.markdown(f"""
@@ -630,6 +622,28 @@ for i, (name, info) in enumerate(PRACTICES.items()):
             st.success(f"✅ 已記錄 {int(count_val)} 次　南無觀世音菩薩 🙏")
             st.rerun()
         st.markdown("</div></div>", unsafe_allow_html=True)
+
+        # ── 迴向文 toggle ──
+        ded_key = f"ded_{name}"
+        if ded_key not in st.session_state:
+            st.session_state[ded_key] = False
+
+        col_ded, _ = st.columns([3, 1])
+        with col_ded:
+            dlabel = "▲ 收起迴向文" if st.session_state[ded_key] else "▼ 展開迴向文"
+            if st.button(dlabel, key=f"ded_btn_{name}"):
+                st.session_state[ded_key] = not st.session_state[ded_key]
+                st.rerun()
+
+        if st.session_state[ded_key]:
+            st.markdown(f"""
+            <div class="dedication-box">
+              <div class="dedication-header">
+                <div class="dedication-header-line"></div>
+                <div class="dedication-header-text">🪔 迴向文</div>
+                <div class="dedication-header-line"></div>
+              </div>{info["dedication"]}</div>
+            """, unsafe_allow_html=True)
 
         # ── records ──
         st.markdown(f"""
