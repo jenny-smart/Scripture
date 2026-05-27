@@ -21,13 +21,18 @@ MANTRA = "離婆離婆帝。求訶求訶帝。陀羅尼帝。尼訶囉帝。毘�
 
 SCRIPTURE_GW = "奉請八大菩薩：\n南摩觀世音菩薩摩訶薩。\n南摩彌勒菩薩摩訶薩。\n南摩虛空藏菩薩摩訶薩。\n南摩普賢菩薩摩訶薩。\n南摩金剛手菩薩摩訶薩。\n南摩妙吉祥菩薩摩訶薩。\n南摩除蓋障菩薩摩訶薩。\n南摩地藏王菩薩摩訶薩。\n南摩諸尊菩薩摩訶薩。\n\n高王觀世音經\n觀世音菩薩。\n南摩佛。南摩法。南摩僧。\n佛國有緣。佛法相因。\n常樂我淨。有緣佛法。\n南摩摩訶般若波羅蜜。是大神咒。\n南摩摩訶般若波羅蜜。是大明咒。\n南摩摩訶般若波羅蜜。是無上咒。\n南摩摩訶般若波羅蜜。是無等等咒。\n南摩淨光祕密佛。法藏佛。獅子吼神足幽王佛。佛告須彌燈王佛。法護佛。金剛藏獅子遊戲佛。寶勝佛。神通佛。藥師琉璃光王佛。普光功德山王佛。善住功德寶王佛。\n過去七佛。未來賢劫千佛。千五百佛。萬五千佛。五百花勝佛。百億金剛藏佛。定光佛。\n六方六佛名號。\n東方寶光月殿月妙尊音王佛。\n南方樹根花王佛。\n西方皂王神通焰花王佛。\n北方月殿清淨佛。\n上方無數精進寶首佛。\n下方善寂月音王佛。\n無量諸佛。多寶佛。釋迦牟尼佛。彌勒佛。阿閦佛。彌陀佛。\n中央一切眾生。在佛世界中者。行住於地上。及在虛空中。慈憂於一切眾生。各令安穩休息。晝夜修持。心常求誦此經。能滅生死苦。消除諸毒害。\n南摩大明觀世音。觀明觀世音。高明觀世音。開明觀世音。藥王菩薩。藥上菩薩。文殊師利菩薩。普賢菩薩。虛空藏菩薩。地藏王菩薩。清涼寶山億萬菩薩。普光王如來化勝菩薩。\n\n念念誦此經。七佛世尊。即說咒曰：\n\n" + "\n".join([MANTRA] * 7) + "\n\n十方觀世音。一切諸菩薩。\n誓願救眾生。稱名悉解脫。\n若有智慧者。殷勤為解說。\n但是有因緣。讀誦口不輟。\n誦經滿千遍。念念心不絕。\n火焰不能傷。刀兵立摧折。\n恚怒生歡喜。死者變成活。\n莫言此是虛。諸佛不妄說。\n高王觀世音。能救諸苦厄。\n臨危急難中。死者變成活。\n諸佛語不虛。是故應頂禮。\n持誦滿千遍。重罪皆消滅。\n厚福堅信者。專攻受持經。\n願以此功德。普及於一切。\n誦滿一千遍。重罪皆消滅。\n\n高王觀世音經　終。"
 
+DEDICATION_GW = "─── 迴向文 ───\n\n願以此（讀誦《高王觀音經》）功德，\n迴向給弟子（您的名字）的墮胎兒\n（若有名字可說名字，或稱「未結緣子女」）。\n\n願他業障消除、離苦得樂、\n求生西方極樂世界。\n\n弟子真心懺悔過去罪過，\n祈求佛菩薩慈悲加佑，\n解冤釋結，接引嬰靈。\n\n阿彌陀佛。\n\n（念誦三遍）"
+
 SCRIPTURE_CH = "懺悔三昧，每天念三遍，不要小看。\n\n無論是過去，現在，或是未來。\n\n因身，口，意的造作，\n被我傷害過的（因緣）眾生。\n\n或因身，口，意的造作，\n所招感的諸多不順和苦難。\n\n不管是身體上的，還是精神上的。\n\n我都願意接受（業果法則）。\n\n並慚愧的懺悔。\n\n因為無明，因未聞四種真諦，\n無量劫來，我們彼此傷害，冤冤相報，\n枉受諸苦於六道中，無有出期。\n\n我們都希望解脫。\n\n願一切被我傷害過的眾生，\n無精神的痛苦，無身體的痛苦，\n願你們保持快樂。\n\n願一切與我有因緣的鬼道，非人眾生，\n得聞佛法，投生善道，趨向解脫。\n\n願一切與我有因緣的人或非人眾生，\n分享我善業的功德，\n並回答；善哉！善哉！善哉！\n\n願一切眾生分享我的功德。"
+
+DEDICATION_CH = "─── 迴向文 ───\n\n弟子（或信士）○○○願以此（讀誦《懺悔三昧》）之功德，\n迴向給弟子累生累世的冤親債主、歷代宗親。\n\n祈請（主尊，如：南無大慈大悲觀世音菩薩 / 地藏王菩薩）\n慈悲作主，超拔他們，\n令業障消除、離苦得樂、往生善處。\n\n願弟子與累世冤親債主解冤釋結、\n善緣增長，同生淨土。\n\n（念誦三遍）"
 
 PRACTICES = {
     "高王觀世音經": {
         "icon": "🙏",
         "subtitle": "每日持誦　功課打卡",
         "scripture": SCRIPTURE_GW,
+        "dedication": DEDICATION_GW,
         "c_accent": "#7C3AED",
         "c_dark":   "#4C1D95",
         "c_light":  "#F0EAFF",
@@ -41,6 +46,7 @@ PRACTICES = {
         "icon": "🪷",
         "subtitle": "每日懺悔　修行打卡",
         "scripture": SCRIPTURE_CH,
+        "dedication": DEDICATION_CH,
         "c_accent": "#0D9488",
         "c_dark":   "#065F46",
         "c_light":  "#E8FAF5",
@@ -318,6 +324,31 @@ body, p, div, span, label {
     letter-spacing: .06em;
     scrollbar-width: thin;
     scrollbar-color: #C4B5A0 transparent;
+    margin-bottom: 10px;
+}
+.dedication-box {
+    background: linear-gradient(160deg, #FFF8EE, #FEF0DC);
+    border: 1px solid #EDD5A8;
+    border-left: 3px solid #C4A87A;
+    border-radius: 0 12px 12px 0;
+    padding: 16px 18px;
+    white-space: pre-wrap;
+    font-size: 14px;
+    line-height: 1.9;
+    color: #5A3E20;
+    font-family: 'Noto Serif TC', serif;
+    letter-spacing: .06em;
+    margin-bottom: 10px;
+}
+.dedication-header {
+    display: flex; align-items: center; gap: 8px;
+    margin-bottom: 12px;
+}
+.dedication-header-line { flex:1; height:1px; background:#EDD5A8; }
+.dedication-header-text {
+    font-size: 11px; font-weight: 600; color: #C4A87A;
+    letter-spacing: .14em; white-space: nowrap;
+    font-family: 'Noto Sans TC', sans-serif;
 }
 
 /* ─── checkin area ─── */
@@ -562,13 +593,21 @@ for i, (name, info) in enumerate(PRACTICES.items()):
 
         col_scr, _ = st.columns([3, 1])
         with col_scr:
-            label = "▲ 收起經文" if st.session_state[scr_key] else "▼ 展開經文"
+            label = "▲ 收起經文與迴向文" if st.session_state[scr_key] else "▼ 展開經文與迴向文"
             if st.button(label, key=f"scr_btn_{name}"):
                 st.session_state[scr_key] = not st.session_state[scr_key]
                 st.rerun()
 
         if st.session_state[scr_key]:
             st.markdown(f'<div class="scripture-box">{info["scripture"]}</div>', unsafe_allow_html=True)
+            st.markdown(f"""
+            <div class="dedication-box">
+              <div class="dedication-header">
+                <div class="dedication-header-line"></div>
+                <div class="dedication-header-text">🪔 迴向文</div>
+                <div class="dedication-header-line"></div>
+              </div>{info["dedication"]}</div>
+            """, unsafe_allow_html=True)
 
         # ── checkin card ──
         st.markdown(f"""
