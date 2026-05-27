@@ -72,6 +72,12 @@ def load_data():
 def save_data(df):
     df.to_csv(DATA_FILE, index=False, encoding="utf-8-sig")
 
+def delete_row(orig_index: int):
+    """刪除 CSV 中指定的原始行號（iloc index）"""
+    df = load_data()
+    df = df.drop(index=orig_index).reset_index(drop=True)
+    save_data(df)
+
 def add_count(name, count):
     if count <= 0:
         return
@@ -314,16 +320,12 @@ body, p, div, span, label {
     border: 1px solid #E8E0D2;
     border-radius: 14px;
     padding: 18px 20px;
-    max-height: 360px;
-    overflow-y: auto;
     white-space: pre-wrap;
     font-size: 15px;
     line-height: 1.75;
     color: #3A2D24;
     font-family: 'Noto Serif TC', serif;
     letter-spacing: .06em;
-    scrollbar-width: thin;
-    scrollbar-color: #C4B5A0 transparent;
     margin-bottom: 10px;
 }
 .dedication-box {
@@ -653,7 +655,10 @@ for i, (name, info) in enumerate(PRACTICES.items()):
                 df_show = df_show[df_show["日期"].str.startswith(sel_month)]
             if sel_date:
                 df_show = df_show[df_show["日期"] == str(sel_date)]
-            df_show = df_show.sort_values(["日期","時間"], ascending=False).reset_index(drop=True)
+            df_show["時間"] = df_show["時間"].fillna("").astype(str).str.replace("nan","",regex=False).str.strip()
+            df_show = df_show.sort_values(["日期","時間"], ascending=False)
+            # 保留原始 index（對應 CSV 行號）供刪除用
+            df_show = df_show.reset_index()  # 原始 index 變成 'index' 欄
 
             total_f = int(df_show["次數"].sum())
             st.markdown(f"""
@@ -673,7 +678,45 @@ for i, (name, info) in enumerate(PRACTICES.items()):
             </div>
             """, unsafe_allow_html=True)
 
-            st.dataframe(df_show[["日期","時間","次數"]], use_container_width=True, hide_index=True)
+            # ── 表頭 ──
+            hc1, hc2, hc3, hc4 = st.columns([3, 2, 2, 1])
+            hc1.markdown('<div style="font-size:12px;font-weight:600;color:#AFA196;padding:4px 0">日期</div>', unsafe_allow_html=True)
+            hc2.markdown('<div style="font-size:12px;font-weight:600;color:#AFA196;padding:4px 0">時間</div>', unsafe_allow_html=True)
+            hc3.markdown('<div style="font-size:12px;font-weight:600;color:#AFA196;padding:4px 0">次數</div>', unsafe_allow_html=True)
+            hc4.markdown('<div style="font-size:12px;font-weight:600;color:#AFA196;padding:4px 0"></div>', unsafe_allow_html=True)
+            st.markdown('<hr style="margin:2px 0 6px;border:none;border-top:1px solid #E8E0D2">', unsafe_allow_html=True)
+
+            # ── 每筆資料 ──
+            confirm_key = f"confirm_{name}"
+            if confirm_key not in st.session_state:
+                st.session_state[confirm_key] = None
+
+            for _, row in df_show.iterrows():
+                orig_idx = int(row["index"])
+                rc1, rc2, rc3, rc4 = st.columns([3, 2, 2, 1])
+                rc1.markdown(f'<div style="font-size:13px;padding:6px 0;color:#3A2D24">{row["日期"]}</div>', unsafe_allow_html=True)
+                rc2.markdown(f'<div style="font-size:13px;padding:6px 0;color:#7A6050">{row["時間"] or "—"}</div>', unsafe_allow_html=True)
+                rc3.markdown(f'<div style="font-size:13px;padding:6px 0;font-weight:600;color:{ac}">{int(row["次數"])}</div>', unsafe_allow_html=True)
+                with rc4:
+                    if st.session_state[confirm_key] == orig_idx:
+                        # 確認刪除狀態
+                        st.markdown('<div style="font-size:11px;color:#C0392B;padding:2px 0">確定？</div>', unsafe_allow_html=True)
+                        cc1, cc2 = st.columns(2)
+                        with cc1:
+                            if st.button("✓", key=f"yes_{name}_{orig_idx}", help="確認刪除"):
+                                delete_row(orig_idx)
+                                st.session_state[confirm_key] = None
+                                st.rerun()
+                        with cc2:
+                            if st.button("✗", key=f"no_{name}_{orig_idx}", help="取消"):
+                                st.session_state[confirm_key] = None
+                                st.rerun()
+                    else:
+                        if st.button("🗑", key=f"del_{name}_{orig_idx}", help="刪除此筆"):
+                            st.session_state[confirm_key] = orig_idx
+                            st.rerun()
+
+            st.markdown('<hr style="margin:6px 0 10px;border:none;border-top:1px solid #E8E0D2">', unsafe_allow_html=True)
 
             st.markdown('<div class="dl-wrap">', unsafe_allow_html=True)
             st.download_button(
