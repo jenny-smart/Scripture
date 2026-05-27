@@ -33,14 +33,14 @@ PRACTICES = {
         "subtitle": "每日持誦　功課打卡",
         "scripture": SCRIPTURE_GW,
         "dedication": DEDICATION_GW,
-        "c_accent": "#7C3AED",
-        "c_dark":   "#4C1D95",
-        "c_light":  "#F0EAFF",
-        "c_mid":    "#DDD0FF",
-        "c_text":   "#4C1D95",
-        "c_btn1":   "#7C3AED",
-        "c_btn2":   "#5B21B6",
-        "c_shadow": "rgba(124,58,237,.25)",
+        "c_accent": "#4A4585",
+        "c_dark":   "#2E2960",
+        "c_light":  "#EDEAF5",
+        "c_mid":    "#C8C4E8",
+        "c_text":   "#2E2960",
+        "c_btn1":   "#4A4585",
+        "c_btn2":   "#332E6B",
+        "c_shadow": "rgba(74,69,133,.25)",
     },
     "懺悔三昧": {
         "icon": "🪷",
@@ -157,7 +157,7 @@ button[data-baseweb="tab"] {
 }
 button[data-baseweb="tab"][aria-selected="true"] {
     color: #5B3A8C !important;
-    border-bottom: 2.5px solid #8B5CF6 !important;
+    border-bottom: 2.5px solid #5B56A0 !important;
     background: transparent !important;
 }
 [data-testid="stTabPanel"] { padding-top: 0 !important; }
@@ -189,7 +189,7 @@ body, p, div, span, label {
     color: #3A2D24;
     margin-bottom: 6px;
 }
-.page-title span { color: #7C3AED; }
+.page-title span { color: #4A4585; }
 .page-date {
     font-size: 12px;
     color: #AFA196;
@@ -220,7 +220,7 @@ body, p, div, span, label {
     position: absolute; top:0; left:0; right:0;
     height: 3px;
 }
-.pcard-p::before { background: linear-gradient(90deg, #7C3AED, #A78BFA, #7C3AED); }
+.pcard-p::before { background: linear-gradient(90deg, #4A4585, #8883C0, #4A4585); }
 .pcard-t::before { background: linear-gradient(90deg, #0D9488, #34D399, #0D9488); }
 
 /* ─── hero ─── */
@@ -297,9 +297,9 @@ body, p, div, span, label {
     transition: transform .1s;
 }
 .dot-empty   { background: #EDE5D8; color: #C4B9AD; }
-.dot-done-p  { background: #7C3AED; color: #F5F0FF; box-shadow: 0 2px 6px rgba(124,58,237,.35); }
+.dot-done-p  { background: #4A4585; color: #F5F0FF; box-shadow: 0 2px 6px rgba(74,69,133,.35); }
 .dot-done-t  { background: #0D9488; color: #ECFDF5; box-shadow: 0 2px 6px rgba(13,148,136,.3); }
-.dot-today-p { background: #F0EAFF; color: #6D28D9; border: 2px solid #8B5CF6; font-weight:900; }
+.dot-today-p { background: #EDEAF5; color: #3D3880; border: 2px solid #5B56A0; font-weight:900; }
 .dot-today-t { background: #D1FAF5; color: #0F766E; border: 2px solid #0D9488; font-weight:900; }
 
 /* ─── scripture ─── */
@@ -385,12 +385,12 @@ body, p, div, span, label {
     border-color: #C4B5A0 !important;
 }
 .btn-p .stButton > button {
-    background: linear-gradient(135deg, #7C3AED, #5B21B6) !important;
+    background: linear-gradient(135deg, #4A4585, #332E6B) !important;
     border: none !important; color: #fff !important;
     height: 52px !important; font-size: 16px !important;
     font-weight: 700 !important; letter-spacing: .08em !important;
     border-radius: 14px !important;
-    box-shadow: 0 6px 22px rgba(124,58,237,.3) !important;
+    box-shadow: 0 6px 22px rgba(74,69,133,.3) !important;
 }
 .btn-t .stButton > button {
     background: linear-gradient(135deg, #0D9488, #065F46) !important;
