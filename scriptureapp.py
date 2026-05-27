@@ -321,13 +321,39 @@ for tab, name in zip(selected, practice_names):
         st.progress(progress)
         st.caption(f"千遍目標：{all_total} / {GOAL}")
 
-with st.expander("查看紀錄"):
-    df = load_data()
-    st.dataframe(df.sort_values("日期", ascending=False), use_container_width=True, hide_index=True)
-    st.download_button(
-        "下載 CSV",
-        df.to_csv(index=False, encoding="utf-8-sig"),
-        file_name="讀經打卡紀錄.csv",
-        mime="text/csv",
-        use_container_width=True,
-    )
+st.markdown("---")
+st.markdown('<div class="section-title">查看紀錄</div>', unsafe_allow_html=True)
+
+record_tab1, record_tab2 = st.tabs(["🪷 懺悔三昧紀錄", "🙏 高王觀世音經紀錄"])
+
+records = load_data()
+
+with record_tab1:
+    repent_records = records[records["經文"] == "懺悔三昧"].copy()
+    if repent_records.empty:
+        st.info("目前還沒有懺悔三昧紀錄 🙏")
+    else:
+        st.dataframe(
+            repent_records.sort_values(["日期"], ascending=False),
+            use_container_width=True,
+            hide_index=True,
+        )
+
+with record_tab2:
+    guanyin_records = records[records["經文"] == "高王觀世音經"].copy()
+    if guanyin_records.empty:
+        st.info("目前還沒有高王觀世音經紀錄 🙏")
+    else:
+        st.dataframe(
+            guanyin_records.sort_values(["日期"], ascending=False),
+            use_container_width=True,
+            hide_index=True,
+        )
+
+st.download_button(
+    "下載全部紀錄 CSV",
+    records.to_csv(index=False, encoding="utf-8-sig"),
+    file_name="讀經打卡紀錄.csv",
+    mime="text/csv",
+    use_container_width=True,
+)
