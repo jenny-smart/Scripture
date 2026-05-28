@@ -1,20 +1,25 @@
 import streamlit as st
 import pandas as pd
 import calendar
+import sqlite3
 from pathlib import Path
 from datetime import date, timedelta
 from zoneinfo import ZoneInfo
 
 TZ = ZoneInfo("Asia/Taipei")
 
+
 def now_tw():
     from datetime import datetime
     return datetime.now(TZ)
 
+
 def today_tw():
     return now_tw().date()
 
-DATA_FILE = Path("records.csv")
+
+DB_FILE = "records.db"
+OLD_CSV_FILE = Path("records.csv")
 GOAL = 1000
 
 MANTRA = "離婆離婆帝。求訶求訶帝。陀羅尼帝。尼訶囉帝。毘黎你帝。摩訶伽帝。真陵乾帝。梭哈"
@@ -34,12 +39,12 @@ PRACTICES = {
         "scripture": SCRIPTURE_GW,
         "dedication": DEDICATION_GW,
         "c_accent": "#4A4585",
-        "c_dark":   "#2E2960",
-        "c_light":  "#EDEAF5",
-        "c_mid":    "#C8C4E8",
-        "c_text":   "#2E2960",
-        "c_btn1":   "#4A4585",
-        "c_btn2":   "#332E6B",
+        "c_dark": "#2E2960",
+        "c_light": "#EDEAF5",
+        "c_mid": "#C8C4E8",
+        "c_text": "#2E2960",
+        "c_btn1": "#4A4585",
+        "c_btn2": "#332E6B",
         "c_shadow": "rgba(74,69,133,.25)",
     },
     "懺悔三昧": {
@@ -48,61 +53,196 @@ PRACTICES = {
         "scripture": SCRIPTURE_CH,
         "dedication": DEDICATION_CH,
         "c_accent": "#0D9488",
-        "c_dark":   "#065F46",
-        "c_light":  "#E8FAF5",
-        "c_mid":    "#A7F3D0",
-        "c_text":   "#065F46",
-        "c_btn1":   "#0D9488",
-        "c_btn2":   "#065F46",
+        "c_dark": "#065F46",
+        "c_light": "#E8FAF5",
+        "c_mid": "#A7F3D0",
+        "c_text": "#065F46",
+        "c_btn1": "#0D9488",
+        "c_btn2": "#065F46",
         "c_shadow": "rgba(13,148,136,.22)",
     },
 }
 
 
-# ── data ──────────────────────────────────────────────────────────
+# ── data / sqlite ─────────────────────────────────────────────────
+
+def get_conn():
+    conn = sqlite3.connect(DB_FILE, timeout=30, check_same_thread=False)
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("PRAGMA busy_timeout=5000")
+    return conn
+
+
+def init_db():
+    conn = get_conn()
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS records (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            日期 TEXT NOT NULL,
+            時間 TEXT NOT NULL,
+            經文 TEXT NOT NULL,
+            次數 INTEGER NOT NULL,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    conn.commit()
+    conn.close()
+
 
 def load_data():
-    if DATA_FILE.exists():
-        df = pd.read_csv(DATA_FILE)
-        if "時間" not in df.columns:
-            df["時間"] = ""
-        return df
-    return pd.DataFrame(columns=["日期", "時間", "經文", "次數"])
+    init_db()
+    conn = get_conn()
+    df = pd.read_sql_query(
+        "SELECT id, 日期, 時間, 經文, 次數 FROM records ORDER BY 日期 DESC, 時間 DESC, id DESC",
+        conn,
+    )
+    conn.close()
 
-def save_data(df):
-    df.to_csv(DATA_FILE, index=False, encoding="utf-8-sig")
+    if df.empty:
+        return pd.DataFrame(columns=["id", "日期", "時間", "經文", "次數"])
 
-def delete_row(orig_index: int):
-    """刪除 CSV 中指定的原始行號（iloc index）"""
-    df = load_data()
-    df = df.drop(index=orig_index).reset_index(drop=True)
-    save_data(df)
+    df["日期"] = df["日期"].astype(str)
+    df["時間"] = df["時間"].fillna("").astype(str)
+    df["經文"] = df["經文"].astype(str)
+    df["次數"] = pd.to_numeric(df["次數"], errors="coerce").fillna(0).astype(int)
+    return df
+
 
 def add_count(name, count):
     if count <= 0:
         return
-    df = load_data()
+
+    init_db()
     n = now_tw()
-    row = pd.DataFrame([{"日期": str(today_tw()), "時間": n.strftime("%H:%M"), "經文": name, "次數": int(count)}])
-    df = pd.concat([df, row], ignore_index=True)
-    save_data(df)
+
+    conn = get_conn()
+    conn.execute(
+        "INSERT INTO records (日期, 時間, 經文, 次數) VALUES (?, ?, ?, ?)",
+        (str(today_tw()), n.strftime("%H:%M"), name, int(count)),
+    )
+    conn.commit()
+    conn.close()
+
+
+def add_manual_record(date_str, name, count, time_str="08:00"):
+    if count <= 0:
+        return
+
+    init_db()
+    conn = get_conn()
+    conn.execute(
+        "INSERT INTO records (日期, 時間, 經文, 次數) VALUES (?, ?, ?, ?)",
+        (date_str, time_str, name, int(count)),
+    )
+    conn.commit()
+    conn.close()
+
+
+def delete_row(record_id: int):
+    init_db()
+    conn = get_conn()
+    conn.execute("DELETE FROM records WHERE id = ?", (int(record_id),))
+    conn.commit()
+    conn.close()
+
+
+def migrate_csv_to_sqlite_once():
+    """如果舊的 records.csv 存在，第一次啟動時自動匯入 SQLite。"""
+    init_db()
+
+    if not OLD_CSV_FILE.exists():
+        return
+
+    conn = get_conn()
+    existing_count = conn.execute("SELECT COUNT(*) FROM records").fetchone()[0]
+
+    # 避免每次重啟都重複匯入舊 CSV
+    if existing_count > 0:
+        conn.close()
+        return
+
+    try:
+        df = pd.read_csv(OLD_CSV_FILE)
+    except Exception:
+        conn.close()
+        return
+
+    required_cols = ["日期", "經文", "次數"]
+    if not all(col in df.columns for col in required_cols):
+        conn.close()
+        return
+
+    if "時間" not in df.columns:
+        df["時間"] = ""
+
+    df = df[["日期", "時間", "經文", "次數"]].copy()
+    df["日期"] = df["日期"].astype(str)
+    df["時間"] = df["時間"].fillna("").astype(str).str.replace("nan", "", regex=False).str.strip()
+    df["經文"] = df["經文"].astype(str)
+    df["次數"] = pd.to_numeric(df["次數"], errors="coerce").fillna(0).astype(int)
+    df = df[df["次數"] > 0]
+
+    for _, row in df.iterrows():
+        conn.execute(
+            "INSERT INTO records (日期, 時間, 經文, 次數) VALUES (?, ?, ?, ?)",
+            (row["日期"], row["時間"], row["經文"], int(row["次數"])),
+        )
+
+    conn.commit()
+    conn.close()
+
+
+def ensure_default_backfill_once():
+    """自動補上 2026/05/25、26、27 兩個經文各 15 次。只會補一次，不會重複新增。"""
+    init_db()
+
+    dates_to_fill = ["2026-05-25", "2026-05-26", "2026-05-27"]
+    names_to_fill = ["高王觀世音經", "懺悔三昧"]
+
+    conn = get_conn()
+
+    for date_str in dates_to_fill:
+        for name in names_to_fill:
+            exists = conn.execute(
+                "SELECT COUNT(*) FROM records WHERE 日期 = ? AND 經文 = ? AND 次數 = ?",
+                (date_str, name, 15),
+            ).fetchone()[0]
+
+            if exists == 0:
+                conn.execute(
+                    "INSERT INTO records (日期, 時間, 經文, 次數) VALUES (?, ?, ?, ?)",
+                    (date_str, "08:00", name, 15),
+                )
+
+    conn.commit()
+    conn.close()
+
 
 def today_count(name):
     df = load_data()
-    if df.empty: return 0
+    if df.empty:
+        return 0
     return int(df[(df["經文"] == name) & (df["日期"] == str(today_tw()))]["次數"].sum())
+
 
 def total_count(name):
     df = load_data()
-    if df.empty: return 0
+    if df.empty:
+        return 0
     return int(df[df["經文"] == name]["次數"].sum())
+
 
 def streak_days(name):
     df = load_data()
-    if df.empty: return 0
+    if df.empty:
+        return 0
+
     days = sorted(df[df["經文"] == name]["日期"].unique(), reverse=True)
-    if not days: return 0
-    count, check = 0, today_tw()
+    if not days:
+        return 0
+
+    count = 0
+    check = today_tw()
     for d in days:
         if str(check) == d:
             count += 1
@@ -111,13 +251,21 @@ def streak_days(name):
             break
     return count
 
+
 def month_totals(name):
     df = load_data()
     today = today_tw()
     m = today.strftime("%Y-%m")
     df_m = df[(df["經文"] == name) & (df["日期"].str.startswith(m))]
-    if df_m.empty: return {}
+    if df_m.empty:
+        return {}
     return df_m.groupby("日期")["次數"].sum().to_dict()
+
+
+# 啟動時初始化資料庫、匯入舊 CSV、補上指定日期資料
+init_db()
+migrate_csv_to_sqlite_once()
+ensure_default_backfill_once()
 
 
 # ── CSS ───────────────────────────────────────────────────────────
@@ -486,7 +634,7 @@ body, p, div, span, label {
 # ── page header ───────────────────────────────────────────────────
 
 today_obj = today_tw()
-weekday_tw_map = ["一","二","三","四","五","六","日"]
+weekday_tw_map = ["一", "二", "三", "四", "五", "六", "日"]
 weekday = weekday_tw_map[today_obj.weekday()]
 
 st.markdown(f"""
@@ -504,21 +652,19 @@ st.markdown(f"""
 tabs = st.tabs(["🙏 高王觀世音經", "🪷 懺悔三昧"])
 
 for i, (name, info) in enumerate(PRACTICES.items()):
-    is_teal     = i == 1
-    card_cls    = "pcard pcard-t" if is_teal else "pcard pcard-p"
-    dot_done    = "dot-done-t" if is_teal else "dot-done-p"
+    is_teal = i == 1
+    card_cls = "pcard pcard-t" if is_teal else "pcard pcard-p"
+    dot_done = "dot-done-t" if is_teal else "dot-done-p"
     dot_today_c = "dot-today-t" if is_teal else "dot-today-p"
-    btn_cls     = "btn-t" if is_teal else "btn-p"
-    ac          = info["c_accent"]
-    lc          = info["c_light"]
-    tc          = info["c_text"]
+    btn_cls = "btn-t" if is_teal else "btn-p"
+    ac = info["c_accent"]
+    lc = info["c_light"]
 
     with tabs[i]:
-
         # ── hero + stats + progress in one card ──
-        t_count  = today_count(name)
-        a_count  = total_count(name)
-        s_days   = streak_days(name)
+        t_count = today_count(name)
+        a_count = total_count(name)
+        s_days = streak_days(name)
         progress = min(a_count / GOAL, 1.0)
 
         st.markdown(f"""
@@ -552,10 +698,10 @@ for i, (name, info) in enumerate(PRACTICES.items()):
           <div class="prog-wrap">
             <div class="prog-meta">
               <span>千遍目標進度</span>
-              <span>{a_count} / {GOAL}　{round(progress*100)}%</span>
+              <span>{a_count} / {GOAL}　{round(progress * 100)}%</span>
             </div>
             <div class="prog-track">
-              <div class="prog-fill" style="width:{round(progress*100)}%;background:{ac}"></div>
+              <div class="prog-fill" style="width:{round(progress * 100)}%;background:{ac}"></div>
             </div>
           </div>
 
@@ -612,8 +758,13 @@ for i, (name, info) in enumerate(PRACTICES.items()):
         c1, c2, c3 = st.columns([1, 2, 1])
         with c2:
             count_val = st.number_input(
-                "次數", min_value=1, max_value=999, value=1, step=1,
-                key=f"ni_{name}", label_visibility="collapsed"
+                "次數",
+                min_value=1,
+                max_value=999,
+                value=1,
+                step=1,
+                key=f"ni_{name}",
+                label_visibility="collapsed",
             )
 
         st.markdown(f'<div class="{btn_cls}">', unsafe_allow_html=True)
@@ -651,7 +802,7 @@ for i, (name, info) in enumerate(PRACTICES.items()):
           <div class="sec-label">打卡紀錄</div>
         """, unsafe_allow_html=True)
 
-        df_all  = load_data()
+        df_all = load_data()
         df_this = df_all[df_all["經文"] == name].copy()
 
         if df_this.empty:
@@ -660,7 +811,7 @@ for i, (name, info) in enumerate(PRACTICES.items()):
             fc1, fc2 = st.columns(2)
             with fc1:
                 all_months = sorted(df_this["日期"].str[:7].unique(), reverse=True)
-                sel_month  = st.selectbox("月份", ["全部"] + list(all_months), key=f"fm_{name}")
+                sel_month = st.selectbox("月份", ["全部"] + list(all_months), key=f"fm_{name}")
             with fc2:
                 sel_date = st.date_input("指定日期", value=None, key=f"fd_{name}")
 
@@ -669,10 +820,9 @@ for i, (name, info) in enumerate(PRACTICES.items()):
                 df_show = df_show[df_show["日期"].str.startswith(sel_month)]
             if sel_date:
                 df_show = df_show[df_show["日期"] == str(sel_date)]
-            df_show["時間"] = df_show["時間"].fillna("").astype(str).str.replace("nan","",regex=False).str.strip()
-            df_show = df_show.sort_values(["日期","時間"], ascending=False)
-            # 保留原始 index（對應 CSV 行號）供刪除用
-            df_show = df_show.reset_index()  # 原始 index 變成 'index' 欄
+
+            df_show["時間"] = df_show["時間"].fillna("").astype(str).str.replace("nan", "", regex=False).str.strip()
+            df_show = df_show.sort_values(["日期", "時間", "id"], ascending=False).reset_index(drop=True)
 
             total_f = int(df_show["次數"].sum())
             st.markdown(f"""
@@ -706,36 +856,36 @@ for i, (name, info) in enumerate(PRACTICES.items()):
                 st.session_state[confirm_key] = None
 
             for _, row in df_show.iterrows():
-                orig_idx = int(row["index"])
+                record_id = int(row["id"])
                 rc1, rc2, rc3, rc4 = st.columns([3, 2, 2, 1])
                 rc1.markdown(f'<div style="font-size:13px;padding:6px 0;color:#3A2D24">{row["日期"]}</div>', unsafe_allow_html=True)
                 rc2.markdown(f'<div style="font-size:13px;padding:6px 0;color:#7A6050">{row["時間"] or "—"}</div>', unsafe_allow_html=True)
                 rc3.markdown(f'<div style="font-size:13px;padding:6px 0;font-weight:600;color:{ac}">{int(row["次數"])}</div>', unsafe_allow_html=True)
                 with rc4:
-                    if st.session_state[confirm_key] == orig_idx:
-                        # 確認刪除狀態
+                    if st.session_state[confirm_key] == record_id:
                         st.markdown('<div style="font-size:11px;color:#C0392B;padding:2px 0">確定？</div>', unsafe_allow_html=True)
                         cc1, cc2 = st.columns(2)
                         with cc1:
-                            if st.button("✓", key=f"yes_{name}_{orig_idx}", help="確認刪除"):
-                                delete_row(orig_idx)
+                            if st.button("✓", key=f"yes_{name}_{record_id}", help="確認刪除"):
+                                delete_row(record_id)
                                 st.session_state[confirm_key] = None
                                 st.rerun()
                         with cc2:
-                            if st.button("✗", key=f"no_{name}_{orig_idx}", help="取消"):
+                            if st.button("✗", key=f"no_{name}_{record_id}", help="取消"):
                                 st.session_state[confirm_key] = None
                                 st.rerun()
                     else:
-                        if st.button("🗑", key=f"del_{name}_{orig_idx}", help="刪除此筆"):
-                            st.session_state[confirm_key] = orig_idx
+                        if st.button("🗑", key=f"del_{name}_{record_id}", help="刪除此筆"):
+                            st.session_state[confirm_key] = record_id
                             st.rerun()
 
             st.markdown('<hr style="margin:6px 0 10px;border:none;border-top:1px solid #E8E0D2">', unsafe_allow_html=True)
 
             st.markdown('<div class="dl-wrap">', unsafe_allow_html=True)
+            export_df = df_show[["日期", "時間", "經文", "次數"]].copy()
             st.download_button(
                 "⬇ 下載 CSV",
-                df_show.to_csv(index=False, encoding="utf-8-sig"),
+                export_df.to_csv(index=False, encoding="utf-8-sig"),
                 file_name=f"{name}_打卡記錄_{today_tw()}.csv",
                 mime="text/csv",
                 use_container_width=True,
