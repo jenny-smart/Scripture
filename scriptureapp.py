@@ -755,24 +755,27 @@ for i, (name, info) in enumerate(PRACTICES.items()):
           <div class="sec-label">今日打卡</div>
         """, unsafe_allow_html=True)
 
-        c1, c2, c3 = st.columns([1, 2, 1])
-        with c2:
+        ci1, ci2 = st.columns([1, 2])
+        with ci1:
             count_val = st.number_input(
                 "次數",
-                min_value=1,
+                min_value=0,
                 max_value=999,
-                value=1,
+                value=0,
                 step=1,
                 key=f"ni_{name}",
                 label_visibility="collapsed",
             )
-
-        st.markdown(f'<div class="{btn_cls}">', unsafe_allow_html=True)
-        if st.button(f"完成 {int(count_val)} 次　記錄", key=f"btn_{name}"):
-            add_count(name, int(count_val))
-            st.success(f"✅ 已記錄 {int(count_val)} 次　南無觀世音菩薩 🙏")
-            st.rerun()
-        st.markdown("</div></div>", unsafe_allow_html=True)
+        with ci2:
+            st.markdown(f'<div class="{btn_cls}" style="margin-top:0">', unsafe_allow_html=True)
+            if st.button(f"完成 {int(count_val)} 次　記錄", key=f"btn_{name}"):
+                if count_val > 0:
+                    add_count(name, int(count_val))
+                    st.success(f"✅ 已記錄 {int(count_val)} 次　南無觀世音菩薩 🙏")
+                    st.rerun()
+                else:
+                    st.warning("請先輸入次數再記錄。")
+            st.markdown("</div></div>", unsafe_allow_html=True)
 
         # ── 迴向文 toggle ──
         ded_key = f"ded_{name}"
