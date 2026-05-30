@@ -583,18 +583,6 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-if supabase_enabled():
-    st.success("✅ 目前使用 Supabase 永久儲存。")
-    with st.expander("資料搬移工具"):
-        st.caption("如果你本機 SQLite 還有舊資料，可以按一次搬到 Supabase。")
-        if st.button("將 SQLite 舊資料搬到 Supabase"):
-            n = migrate_sqlite_to_supabase_once()
-            st.success(f"已搬移 {n} 筆資料到 Supabase。")
-            st.rerun()
-else:
-    st.warning("⚠️ 目前尚未設定 Supabase，暫時使用本機 SQLite。Streamlit Cloud 重啟後資料仍可能消失。")
-
-
 # ============================================================
 # Main UI
 # ============================================================
