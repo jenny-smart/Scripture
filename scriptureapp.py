@@ -3,24 +3,30 @@ import pandas as pd
 import calendar
 import sqlite3
 from pathlib import Path
-from datetime import date, timedelta
+from datetime import timedelta
 from zoneinfo import ZoneInfo
 
 TZ = ZoneInfo("Asia/Taipei")
+DB_FILE = "records.db"
+OLD_CSV_FILE = Path("records.csv")
+GOAL = 1000
+SHEET_TAB_NAME = "records"
 
+# ============================================================
+# 時間
+# ============================================================
 
 def now_tw():
     from datetime import datetime
     return datetime.now(TZ)
 
-
 def today_tw():
     return now_tw().date()
 
 
-DB_FILE = "records.db"
-OLD_CSV_FILE = Path("records.csv")
-GOAL = 1000
+# ============================================================
+# 經文內容
+# ============================================================
 
 MANTRA = "離婆離婆帝。求訶求訶帝。陀羅尼帝。尼訶囉帝。毘黎你帝。摩訶伽帝。真陵乾帝。梭哈"
 
@@ -39,13 +45,11 @@ PRACTICES = {
         "scripture": SCRIPTURE_GW,
         "dedication": DEDICATION_GW,
         "c_accent": "#4A4585",
-        "c_dark": "#2E2960",
         "c_light": "#EDEAF5",
         "c_mid": "#C8C4E8",
-        "c_text": "#2E2960",
-        "c_btn1": "#4A4585",
-        "c_btn2": "#332E6B",
-        "c_shadow": "rgba(74,69,133,.25)",
+        "dot_done": "dot-done-p",
+        "dot_today": "dot-today-p",
+        "btn_cls": "btn-p",
     },
     "懺悔三昧": {
         "icon": "🪷",
@@ -53,18 +57,18 @@ PRACTICES = {
         "scripture": SCRIPTURE_CH,
         "dedication": DEDICATION_CH,
         "c_accent": "#0D9488",
-        "c_dark": "#065F46",
         "c_light": "#E8FAF5",
         "c_mid": "#A7F3D0",
-        "c_text": "#065F46",
-        "c_btn1": "#0D9488",
-        "c_btn2": "#065F46",
-        "c_shadow": "rgba(13,148,136,.22)",
+        "dot_done": "dot-done-t",
+        "dot_today": "dot-today-t",
+        "btn_cls": "btn-t",
     },
 }
 
 
-# ── data / sqlite ─────────────────────────────────────────────────
+# ============================================================
+# SQLite 備援資料庫
+# ============================================================
 
 def get_conn():
     conn = sqlite3.connect(DB_FILE, timeout=30, check_same_thread=False)
@@ -72,8 +76,7 @@ def get_conn():
     conn.execute("PRAGMA busy_timeout=5000")
     return conn
 
-
-def init_db():
+def init_sqlite():
     conn = get_conn()
     conn.execute("""
         CREATE TABLE IF NOT EXISTS records (
@@ -88,47 +91,18 @@ def init_db():
     conn.commit()
     conn.close()
 
-
-def load_data():
-    init_db()
+def load_sqlite():
+    init_sqlite()
     conn = get_conn()
     df = pd.read_sql_query(
         "SELECT id, 日期, 時間, 經文, 次數 FROM records ORDER BY 日期 DESC, 時間 DESC, id DESC",
         conn,
     )
     conn.close()
+    return normalize_df(df)
 
-    if df.empty:
-        return pd.DataFrame(columns=["id", "日期", "時間", "經文", "次數"])
-
-    df["日期"] = df["日期"].astype(str)
-    df["時間"] = df["時間"].fillna("").astype(str)
-    df["經文"] = df["經文"].astype(str)
-    df["次數"] = pd.to_numeric(df["次數"], errors="coerce").fillna(0).astype(int)
-    return df
-
-
-def add_count(name, count):
-    if count <= 0:
-        return
-
-    init_db()
-    n = now_tw()
-
-    conn = get_conn()
-    conn.execute(
-        "INSERT INTO records (日期, 時間, 經文, 次數) VALUES (?, ?, ?, ?)",
-        (str(today_tw()), n.strftime("%H:%M"), name, int(count)),
-    )
-    conn.commit()
-    conn.close()
-
-
-def add_manual_record(date_str, name, count, time_str="08:00"):
-    if count <= 0:
-        return
-
-    init_db()
+def add_sqlite(date_str, time_str, name, count):
+    init_sqlite()
     conn = get_conn()
     conn.execute(
         "INSERT INTO records (日期, 時間, 經文, 次數) VALUES (?, ?, ?, ?)",
@@ -137,18 +111,135 @@ def add_manual_record(date_str, name, count, time_str="08:00"):
     conn.commit()
     conn.close()
 
-
-def delete_row(record_id: int):
-    init_db()
+def delete_sqlite(record_id):
+    init_sqlite()
     conn = get_conn()
     conn.execute("DELETE FROM records WHERE id = ?", (int(record_id),))
     conn.commit()
     conn.close()
 
 
+# ============================================================
+# Google Sheet 永久資料庫
+# ============================================================
+
+def sheet_enabled():
+    return "gcp_service_account" in st.secrets and "GOOGLE_SHEET_ID" in st.secrets
+
+@st.cache_resource(ttl=300)
+def get_worksheet():
+    import gspread
+
+    creds = dict(st.secrets["gcp_service_account"])
+    sheet_id = st.secrets["GOOGLE_SHEET_ID"]
+
+    gc = gspread.service_account_from_dict(creds)
+    sh = gc.open_by_key(sheet_id)
+
+    try:
+        ws = sh.worksheet(SHEET_TAB_NAME)
+    except Exception:
+        ws = sh.add_worksheet(title=SHEET_TAB_NAME, rows=1000, cols=5)
+        ws.append_row(["日期", "時間", "經文", "次數"])
+
+    values = ws.get_all_values()
+    if not values:
+        ws.append_row(["日期", "時間", "經文", "次數"])
+    elif values[0][:4] != ["日期", "時間", "經文", "次數"]:
+        ws.insert_row(["日期", "時間", "經文", "次數"], 1)
+
+    return ws
+
+def load_sheet():
+    ws = get_worksheet()
+    rows = ws.get_all_records()
+
+    if not rows:
+        return pd.DataFrame(columns=["id", "日期", "時間", "經文", "次數"])
+
+    df = pd.DataFrame(rows)
+
+    for col in ["日期", "時間", "經文", "次數"]:
+        if col not in df.columns:
+            df[col] = ""
+
+    # Google Sheet 沒有 SQLite id，所以用實際列號當 id。
+    # 第 1 列是表頭，資料從第 2 列開始。
+    df["id"] = range(2, len(df) + 2)
+    return normalize_df(df[["id", "日期", "時間", "經文", "次數"]])
+
+def add_sheet(date_str, time_str, name, count):
+    ws = get_worksheet()
+    ws.append_row([date_str, time_str, name, int(count)], value_input_option="USER_ENTERED")
+
+def delete_sheet(row_number):
+    ws = get_worksheet()
+    ws.delete_rows(int(row_number))
+
+
+# ============================================================
+# 統一資料層
+# ============================================================
+
+def normalize_df(df):
+    if df is None or df.empty:
+        return pd.DataFrame(columns=["id", "日期", "時間", "經文", "次數"])
+
+    df = df.copy()
+    for col in ["id", "日期", "時間", "經文", "次數"]:
+        if col not in df.columns:
+            df[col] = ""
+
+    df["日期"] = df["日期"].astype(str).str.strip()
+    df["時間"] = df["時間"].fillna("").astype(str).str.replace("nan", "", regex=False).str.strip()
+    df["經文"] = df["經文"].astype(str).str.strip()
+    df["次數"] = pd.to_numeric(df["次數"], errors="coerce").fillna(0).astype(int)
+    df = df[df["次數"] > 0].copy()
+    return df[["id", "日期", "時間", "經文", "次數"]]
+
+def load_data():
+    if sheet_enabled():
+        try:
+            return load_sheet()
+        except Exception as e:
+            st.warning(f"Google Sheet 讀取失敗，目前改用本機 SQLite 備援：{e}")
+            return load_sqlite()
+    return load_sqlite()
+
+def add_record(date_str, time_str, name, count):
+    if count <= 0:
+        return
+
+    if sheet_enabled():
+        try:
+            add_sheet(date_str, time_str, name, count)
+            return
+        except Exception as e:
+            st.warning(f"Google Sheet 寫入失敗，暫時寫入本機 SQLite：{e}")
+
+    add_sqlite(date_str, time_str, name, count)
+
+def add_count(name, count):
+    n = now_tw()
+    add_record(str(today_tw()), n.strftime("%H:%M"), name, int(count))
+
+def add_manual_record(date_str, name, count, time_str="08:00"):
+    add_record(str(date_str), str(time_str or "08:00"), name, int(count))
+
+def delete_row(record_id):
+    if sheet_enabled():
+        try:
+            delete_sheet(record_id)
+            return
+        except Exception as e:
+            st.warning(f"Google Sheet 刪除失敗，請稍後再試：{e}")
+            return
+
+    delete_sqlite(record_id)
+
 def migrate_csv_to_sqlite_once():
-    """如果舊的 records.csv 存在，第一次啟動時自動匯入 SQLite。"""
-    init_db()
+    """如果舊 records.csv 存在，第一次啟動時自動匯入 SQLite 備援。"""
+    init_sqlite()
 
     if not OLD_CSV_FILE.exists():
         return
@@ -156,7 +247,6 @@ def migrate_csv_to_sqlite_once():
     conn = get_conn()
     existing_count = conn.execute("SELECT COUNT(*) FROM records").fetchone()[0]
 
-    # 避免每次重啟都重複匯入舊 CSV
     if existing_count > 0:
         conn.close()
         return
@@ -175,13 +265,7 @@ def migrate_csv_to_sqlite_once():
     if "時間" not in df.columns:
         df["時間"] = ""
 
-    df = df[["日期", "時間", "經文", "次數"]].copy()
-    df["日期"] = df["日期"].astype(str)
-    df["時間"] = df["時間"].fillna("").astype(str).str.replace("nan", "", regex=False).str.strip()
-    df["經文"] = df["經文"].astype(str)
-    df["次數"] = pd.to_numeric(df["次數"], errors="coerce").fillna(0).astype(int)
-    df = df[df["次數"] > 0]
-
+    df = normalize_df(df)
     for _, row in df.iterrows():
         conn.execute(
             "INSERT INTO records (日期, 時間, 經文, 次數) VALUES (?, ?, ?, ?)",
@@ -191,32 +275,38 @@ def migrate_csv_to_sqlite_once():
     conn.commit()
     conn.close()
 
+def migrate_sqlite_to_sheet_once():
+    """第一次設定好 Google Sheet 後，可按畫面按鈕把 SQLite 現有資料搬到 Sheet。"""
+    if not sheet_enabled():
+        return 0
 
-def ensure_default_backfill_once():
-    """自動補上 2026/05/25、26、27 兩個經文各 15 次。只會補一次，不會重複新增。"""
-    init_db()
+    df_sqlite = load_sqlite()
+    if df_sqlite.empty:
+        return 0
 
-    dates_to_fill = ["2026-05-25", "2026-05-26", "2026-05-27"]
-    names_to_fill = ["高王觀世音經", "懺悔三昧"]
+    ws = get_worksheet()
+    existing = load_sheet()
 
-    conn = get_conn()
+    count = 0
+    for _, row in df_sqlite.iterrows():
+        same = existing[
+            (existing["日期"] == row["日期"])
+            & (existing["時間"] == row["時間"])
+            & (existing["經文"] == row["經文"])
+            & (existing["次數"] == int(row["次數"]))
+        ]
+        if same.empty:
+            ws.append_row(
+                [row["日期"], row["時間"], row["經文"], int(row["次數"])],
+                value_input_option="USER_ENTERED",
+            )
+            count += 1
+    return count
 
-    for date_str in dates_to_fill:
-        for name in names_to_fill:
-            exists = conn.execute(
-                "SELECT COUNT(*) FROM records WHERE 日期 = ? AND 經文 = ? AND 次數 = ?",
-                (date_str, name, 15),
-            ).fetchone()[0]
 
-            if exists == 0:
-                conn.execute(
-                    "INSERT INTO records (日期, 時間, 經文, 次數) VALUES (?, ?, ?, ?)",
-                    (date_str, "08:00", name, 15),
-                )
-
-    conn.commit()
-    conn.close()
-
+# ============================================================
+# 統計
+# ============================================================
 
 def today_count(name):
     df = load_data()
@@ -224,13 +314,11 @@ def today_count(name):
         return 0
     return int(df[(df["經文"] == name) & (df["日期"] == str(today_tw()))]["次數"].sum())
 
-
 def total_count(name):
     df = load_data()
     if df.empty:
         return 0
     return int(df[df["經文"] == name]["次數"].sum())
-
 
 def streak_days(name):
     df = load_data()
@@ -243,14 +331,15 @@ def streak_days(name):
 
     count = 0
     check = today_tw()
+
     for d in days:
         if str(check) == d:
             count += 1
             check -= timedelta(days=1)
         elif d < str(check):
             break
-    return count
 
+    return count
 
 def month_totals(name):
     df = load_data()
@@ -262,13 +351,20 @@ def month_totals(name):
     return df_m.groupby("日期")["次數"].sum().to_dict()
 
 
-# 啟動時初始化資料庫、匯入舊 CSV、補上指定日期資料
-init_db()
+# ============================================================
+# 初始化
+# ============================================================
+
+init_sqlite()
 migrate_csv_to_sqlite_once()
-ensure_default_backfill_once()
+
+# 重要：這裡已移除 ensure_default_backfill_once()
+# 不再自動補 2026-05-25 / 26 / 27 的假資料。
 
 
-# ── CSS ───────────────────────────────────────────────────────────
+# ============================================================
+# 畫面設定
+# ============================================================
 
 st.set_page_config(page_title="讀誦打卡", page_icon="🪷", layout="centered")
 
@@ -276,24 +372,22 @@ st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;500;600;700;900&family=Noto+Sans+TC:wght@300;400;500;700&display=swap');
 
-html, body, [data-testid="stAppViewContainer"] {
-    background: #F2EDE4 !important;
-}
-[data-testid="stAppViewContainer"] > .main { background: transparent; }
-.block-container {
-    padding-top: 0 !important;
-    padding-bottom: 3rem !important;
-    max-width: 580px !important;
+html, body, [data-testid="stAppViewContainer"] { background: #F2EDE4 !important; }
+.block-container { padding-top: 0 !important; padding-bottom: 3rem !important; max-width: 580px !important; }
+
+* { box-sizing: border-box; }
+body, p, div, span, label {
+    font-family: 'Noto Sans TC', sans-serif !important;
+    color: #3A2D24;
 }
 
-/* ─── tabs ─── */
-[data-testid="stTabs"] { margin-top:0 !important; }
 [data-testid="stTabs"] > div:first-child {
     position: sticky; top: 0; z-index: 999;
     background: #F2EDE4;
     padding: 12px 0 0;
     border-bottom: 1.5px solid #D9D0C4;
 }
+
 button[data-baseweb="tab"] {
     font-family: 'Noto Serif TC', serif !important;
     font-size: 14px !important;
@@ -303,33 +397,13 @@ button[data-baseweb="tab"] {
     background: transparent !important;
     letter-spacing: .05em;
 }
+
 button[data-baseweb="tab"][aria-selected="true"] {
     color: #5B3A8C !important;
     border-bottom: 2.5px solid #5B56A0 !important;
-    background: transparent !important;
-}
-[data-testid="stTabPanel"] { padding-top: 0 !important; }
-
-/* ─── global ─── */
-* { box-sizing: border-box; }
-body, p, div, span, label {
-    font-family: 'Noto Sans TC', sans-serif !important;
-    color: #3A2D24;
 }
 
-/* ─── page header ─── */
-.page-header {
-    text-align: center;
-    padding: 32px 0 20px;
-    position: relative;
-}
-.page-header::before {
-    content: '';
-    display: block;
-    width: 60px; height: 2px;
-    background: linear-gradient(90deg, transparent, #C4A87A, transparent);
-    margin: 0 auto 16px;
-}
+.page-header { text-align: center; padding: 32px 0 20px; }
 .page-title {
     font-family: 'Noto Serif TC', serif;
     font-size: 28px; font-weight: 900;
@@ -338,21 +412,8 @@ body, p, div, span, label {
     margin-bottom: 6px;
 }
 .page-title span { color: #4A4585; }
-.page-date {
-    font-size: 12px;
-    color: #AFA196;
-    letter-spacing: .1em;
-    font-family: 'Noto Sans TC', sans-serif;
-}
-.page-header::after {
-    content: '';
-    display: block;
-    width: 40px; height: 1px;
-    background: linear-gradient(90deg, transparent, #C4A87A, transparent);
-    margin: 12px auto 0;
-}
+.page-date { font-size: 12px; color: #AFA196; letter-spacing: .1em; }
 
-/* ─── cards ─── */
 .pcard {
     background: #FFFEF9;
     border-radius: 20px;
@@ -363,15 +424,10 @@ body, p, div, span, label {
     position: relative;
     overflow: hidden;
 }
-.pcard::before {
-    content: '';
-    position: absolute; top:0; left:0; right:0;
-    height: 3px;
-}
+.pcard::before { content: ''; position: absolute; top:0; left:0; right:0; height: 3px; }
 .pcard-p::before { background: linear-gradient(90deg, #4A4585, #8883C0, #4A4585); }
 .pcard-t::before { background: linear-gradient(90deg, #0D9488, #34D399, #0D9488); }
 
-/* ─── hero ─── */
 .hero-wrap {
     display: flex; align-items: center; gap: 14px;
     padding-bottom: 14px;
@@ -389,12 +445,8 @@ body, p, div, span, label {
     letter-spacing: .1em; line-height: 1.2;
     margin-bottom: 3px;
 }
-.hero-sub {
-    font-size: 11px; color: #AFA196;
-    letter-spacing: .08em;
-}
+.hero-sub { font-size: 11px; color: #AFA196; letter-spacing: .08em; }
 
-/* ─── stat chips ─── */
 .stat-row { display:flex; gap:8px; margin-bottom: 12px; }
 .stat-chip {
     flex: 1;
@@ -403,37 +455,24 @@ body, p, div, span, label {
     text-align: center;
     border: 1px solid transparent;
 }
-.stat-num {
-    font-family: 'Noto Serif TC', serif;
-    font-size: 26px; font-weight: 700; line-height: 1;
-}
+.stat-num { font-family: 'Noto Serif TC', serif; font-size: 26px; font-weight: 700; line-height: 1; }
 .stat-lbl { font-size: 11px; color: #AFA196; margin-top:4px; letter-spacing:.04em; }
 
-/* ─── progress ─── */
-.prog-wrap { margin-bottom: 14px; }
 .prog-meta {
     display:flex; justify-content:space-between;
     font-size: 11px; color: #AFA196;
     margin-bottom: 6px; letter-spacing:.03em;
 }
-.prog-track {
-    height: 6px;
-    background: #EDE5D8;
-    border-radius: 3px;
-    overflow: hidden;
-}
+.prog-track { height: 6px; background: #EDE5D8; border-radius: 3px; overflow: hidden; }
 .prog-fill { height: 100%; border-radius: 3px; }
 
-/* ─── dot calendar ─── */
-.cal-section { margin-bottom: 12px; }
 .cal-header {
     display: flex; justify-content: space-between; align-items: baseline;
     margin-bottom: 8px;
 }
 .cal-title {
     font-size: 11px; font-weight: 600;
-    color: #AFA196; letter-spacing:.1em; text-transform: uppercase;
-    font-family: 'Noto Sans TC', sans-serif;
+    color: #AFA196; letter-spacing:.1em;
 }
 .cal-month { font-size: 11px; color: #C4B9AD; }
 .dot-grid { display:flex; flex-wrap:wrap; gap:5px; }
@@ -441,8 +480,6 @@ body, p, div, span, label {
     width: 28px; height: 28px; border-radius: 50%;
     display: flex; align-items: center; justify-content: center;
     font-size: 10px; font-weight: 700;
-    font-family: 'Noto Sans TC', sans-serif;
-    transition: transform .1s;
 }
 .dot-empty   { background: #EDE5D8; color: #C4B9AD; }
 .dot-done-p  { background: #4A4585; color: #F5F0FF; box-shadow: 0 2px 6px rgba(74,69,133,.35); }
@@ -450,19 +487,6 @@ body, p, div, span, label {
 .dot-today-p { background: #EDEAF5; color: #3D3880; border: 2px solid #5B56A0; font-weight:900; }
 .dot-today-t { background: #D1FAF5; color: #0F766E; border: 2px solid #0D9488; font-weight:900; }
 
-/* ─── scripture ─── */
-.scripture-wrap { margin-bottom: 12px; }
-.scripture-toggle {
-    display: flex; align-items: center; gap: 8px;
-    cursor: pointer;
-    font-size: 13px; color: #AFA196;
-    font-family: 'Noto Sans TC', sans-serif;
-    padding: 8px 0;
-    border: none; background: none;
-    user-select: none;
-    letter-spacing: .04em;
-}
-.scripture-toggle:hover { color: #7A6050; }
 .scripture-box {
     background: #FDFAF5;
     border: 1px solid #E8E0D2;
@@ -490,97 +514,44 @@ body, p, div, span, label {
     letter-spacing: .06em;
     margin-bottom: 10px;
 }
-.dedication-header {
-    display: flex; align-items: center; gap: 8px;
-    margin-bottom: 12px;
-}
-.dedication-header-line { flex:1; height:1px; background:#EDD5A8; }
-.dedication-header-text {
-    font-size: 11px; font-weight: 600; color: #C4A87A;
-    letter-spacing: .14em; white-space: nowrap;
-    font-family: 'Noto Sans TC', sans-serif;
-}
 
-/* ─── checkin area ─── */
-.checkin-section {
-    border-top: 1px solid #EDE5D8;
-    padding-top: 14px;
-    margin-top: 2px;
-}
 .sec-label {
     font-size: 11px; font-weight: 600; letter-spacing:.12em;
     color: #AFA196; text-transform: uppercase;
-    font-family: 'Noto Sans TC', sans-serif;
     margin-bottom: 10px;
 }
 
-/* ─── buttons ─── */
-.stButton > button {
+.stButton > button, .stDownloadButton > button {
     font-family: 'Noto Sans TC', sans-serif !important;
     border: 1.5px solid #D9D0C4 !important;
     border-radius: 12px !important;
-    height: 44px !important;
+    min-height: 42px !important;
     font-size: 14px !important;
     font-weight: 600 !important;
     background: #FFFEF9 !important;
     color: #5A3E2B !important;
-    transition: all .15s !important;
     width: 100% !important;
     letter-spacing: .04em !important;
-}
-.stButton > button:hover {
-    background: #F5EEE4 !important;
-    border-color: #C4B5A0 !important;
 }
 .btn-p .stButton > button {
     background: linear-gradient(135deg, #4A4585, #332E6B) !important;
     border: none !important; color: #fff !important;
     height: 52px !important; font-size: 16px !important;
-    font-weight: 700 !important; letter-spacing: .08em !important;
-    border-radius: 14px !important;
-    box-shadow: 0 6px 22px rgba(74,69,133,.3) !important;
 }
 .btn-t .stButton > button {
     background: linear-gradient(135deg, #0D9488, #065F46) !important;
     border: none !important; color: #fff !important;
     height: 52px !important; font-size: 16px !important;
-    font-weight: 700 !important; letter-spacing: .08em !important;
-    border-radius: 14px !important;
-    box-shadow: 0 6px 22px rgba(13,148,136,.28) !important;
 }
-
-/* ─── number input ─── */
 [data-testid="stNumberInput"] input {
     font-family: 'Noto Serif TC', serif !important;
-    font-size: 24px !important; font-weight: 700 !important;
+    font-size: 22px !important; font-weight: 700 !important;
     background: #FDFAF5 !important;
     border: 1.5px solid #D9D0C4 !important;
     border-radius: 12px !important;
     color: #3A2D24 !important;
     text-align: center !important;
 }
-[data-testid="stNumberInput"] button {
-    background: #F0E8DC !important;
-    border-radius: 8px !important;
-    color: #7A6050 !important;
-}
-
-/* ─── success ─── */
-[data-testid="stAlert"] {
-    background: #F0FDF4 !important;
-    border: 1px solid #86EFAC !important;
-    border-radius: 12px !important;
-    color: #14532D !important;
-    font-family: 'Noto Sans TC', sans-serif !important;
-}
-
-/* ─── records section ─── */
-.records-wrap {
-    border-top: 1px dashed #D9D0C4;
-    padding-top: 14px; margin-top: 4px;
-}
-
-/* ─── record stat pills ─── */
 .rpill-row { display:flex; gap:8px; margin-bottom:10px; }
 .rpill {
     flex:1; text-align:center;
@@ -591,47 +562,13 @@ body, p, div, span, label {
 }
 .rpill-num { font-family:'Noto Serif TC',serif; font-size:20px; font-weight:700; }
 .rpill-lbl { font-size:11px; color:#AFA196; margin-top:3px; }
-
-/* ─── dataframe ─── */
-[data-testid="stDataFrame"] { border-radius:14px; overflow:hidden; }
-
-/* ─── selectbox / date ─── */
-[data-baseweb="select"] > div {
-    background: #FDFAF5 !important;
-    border-color: #D9D0C4 !important;
-    border-radius: 10px !important;
-    color: #3A2D24 !important;
-    font-family: 'Noto Sans TC', sans-serif !important;
-}
-[data-testid="stDateInput"] input {
-    background: #FDFAF5 !important;
-    border-color: #D9D0C4 !important;
-    border-radius: 10px !important;
-    color: #3A2D24 !important;
-}
-[data-baseweb="select"] svg { color: #AFA196 !important; }
-
-/* ─── download button ─── */
-.dl-wrap .stDownloadButton > button {
-    background: #F5EEE4 !important;
-    border: 1px solid #D9D0C4 !important;
-    border-radius: 10px !important;
-    color: #7A6050 !important;
-    font-size: 13px !important;
-    height: 40px !important;
-}
-
-/* ─── expander: hide completely (using manual toggle instead) ─── */
-[data-testid="stExpander"] {
-    background: transparent !important;
-    border: none !important;
-    box-shadow: none !important;
-}
 </style>
 """, unsafe_allow_html=True)
 
 
-# ── page header ───────────────────────────────────────────────────
+# ============================================================
+# Header
+# ============================================================
 
 today_obj = today_tw()
 weekday_tw_map = ["一", "二", "三", "四", "五", "六", "日"]
@@ -646,22 +583,30 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
+if sheet_enabled():
+    st.success("✅ 目前使用 Google Sheet 永久儲存。")
+    with st.expander("資料搬移工具"):
+        st.caption("如果你本機 SQLite 還有舊資料，可以按一次搬到 Google Sheet。")
+        if st.button("將 SQLite 舊資料搬到 Google Sheet"):
+            n = migrate_sqlite_to_sheet_once()
+            st.success(f"已搬移 {n} 筆資料到 Google Sheet。")
+            st.rerun()
+else:
+    st.warning("⚠️ 目前尚未設定 Google Sheet，暫時使用本機 SQLite。Streamlit Cloud 重啟後資料仍可能消失。")
 
-# ── tabs ──────────────────────────────────────────────────────────
+
+# ============================================================
+# Main UI
+# ============================================================
 
 tabs = st.tabs(["🙏 高王觀世音經", "🪷 懺悔三昧"])
 
 for i, (name, info) in enumerate(PRACTICES.items()):
-    is_teal = i == 1
-    card_cls = "pcard pcard-t" if is_teal else "pcard pcard-p"
-    dot_done = "dot-done-t" if is_teal else "dot-done-p"
-    dot_today_c = "dot-today-t" if is_teal else "dot-today-p"
-    btn_cls = "btn-t" if is_teal else "btn-p"
+    card_cls = "pcard pcard-t" if i == 1 else "pcard pcard-p"
     ac = info["c_accent"]
     lc = info["c_light"]
 
     with tabs[i]:
-        # ── hero + stats + progress in one card ──
         t_count = today_count(name)
         a_count = total_count(name)
         s_days = streak_days(name)
@@ -669,7 +614,6 @@ for i, (name, info) in enumerate(PRACTICES.items()):
 
         st.markdown(f"""
         <div class="{card_cls}">
-
           <div class="hero-wrap">
             <div class="hero-icon-wrap" style="background:{lc}">
               <span>{info['icon']}</span>
@@ -695,30 +639,27 @@ for i, (name, info) in enumerate(PRACTICES.items()):
             </div>
           </div>
 
-          <div class="prog-wrap">
-            <div class="prog-meta">
-              <span>千遍目標進度</span>
-              <span>{a_count} / {GOAL}　{round(progress * 100)}%</span>
-            </div>
-            <div class="prog-track">
-              <div class="prog-fill" style="width:{round(progress * 100)}%;background:{ac}"></div>
-            </div>
+          <div class="prog-meta">
+            <span>千遍目標進度</span>
+            <span>{a_count} / {GOAL}　{round(progress * 100)}%</span>
           </div>
-
+          <div class="prog-track">
+            <div class="prog-fill" style="width:{round(progress * 100)}%;background:{ac}"></div>
+          </div>
         </div>
         """, unsafe_allow_html=True)
 
-        # ── dot calendar card ──
+        # 月曆
         mt = month_totals(name)
         days_in_month = calendar.monthrange(today_obj.year, today_obj.month)[1]
         dots = ""
         for d in range(1, days_in_month + 1):
             ds = f"{today_obj.year}-{today_obj.month:02d}-{d:02d}"
-            cnt = mt.get(ds, 0)
+            cnt = int(mt.get(ds, 0))
             if d == today_obj.day:
-                cls = dot_today_c if cnt == 0 else dot_done
+                cls = info["dot_done"] if cnt > 0 else info["dot_today"]
             elif cnt > 0:
-                cls = dot_done
+                cls = info["dot_done"]
             else:
                 cls = "dot-empty"
             tip = f"title='{cnt}次'" if cnt > 0 else ""
@@ -734,26 +675,20 @@ for i, (name, info) in enumerate(PRACTICES.items()):
         </div>
         """, unsafe_allow_html=True)
 
-        # ── 經文 toggle ──
+        # 經文
         scr_key = f"scr_{name}"
         if scr_key not in st.session_state:
             st.session_state[scr_key] = False
 
-        col_scr, _ = st.columns([3, 1])
-        with col_scr:
-            label = "▲ 收起經文" if st.session_state[scr_key] else "▼ 展開經文"
-            if st.button(label, key=f"scr_btn_{name}"):
-                st.session_state[scr_key] = not st.session_state[scr_key]
-                st.rerun()
+        if st.button("▲ 收起經文" if st.session_state[scr_key] else "▼ 展開經文", key=f"scr_btn_{name}"):
+            st.session_state[scr_key] = not st.session_state[scr_key]
+            st.rerun()
 
         if st.session_state[scr_key]:
             st.markdown(f'<div class="scripture-box">{info["scripture"]}</div>', unsafe_allow_html=True)
 
-        # ── checkin card ──
-        st.markdown(f"""
-        <div class="pcard" style="padding:16px 18px">
-          <div class="sec-label">今日打卡</div>
-        """, unsafe_allow_html=True)
+        # 今日打卡
+        st.markdown('<div class="pcard" style="padding:16px 18px"><div class="sec-label">今日打卡</div>', unsafe_allow_html=True)
 
         ci1, ci2 = st.columns([1, 2])
         with ci1:
@@ -766,44 +701,55 @@ for i, (name, info) in enumerate(PRACTICES.items()):
                 key=f"ni_{name}",
                 label_visibility="collapsed",
             )
+
         with ci2:
-            st.markdown(f'<div class="{btn_cls}" style="margin-top:0">', unsafe_allow_html=True)
+            st.markdown(f'<div class="{info["btn_cls"]}" style="margin-top:0">', unsafe_allow_html=True)
             if st.button(f"完成 {int(count_val)} 次　記錄", key=f"btn_{name}"):
                 if count_val > 0:
                     add_count(name, int(count_val))
-                    st.success(f"✅ 已記錄 {int(count_val)} 次　南無觀世音菩薩 🙏")
+                    st.success(f"✅ 已記錄 {int(count_val)} 次")
                     st.rerun()
                 else:
                     st.warning("請先輸入次數再記錄。")
-            st.markdown("</div></div>", unsafe_allow_html=True)
+            st.markdown("</div>", unsafe_allow_html=True)
 
-        # ── 迴向文 toggle ──
+        st.markdown("</div>", unsafe_allow_html=True)
+
+        # 補登紀錄
+        st.markdown('<div class="pcard" style="padding:16px 18px"><div class="sec-label">補登紀錄</div>', unsafe_allow_html=True)
+
+        m1, m2, m3 = st.columns([1.4, 1, 1])
+        with m1:
+            manual_date = st.date_input("補登日期", value=today_tw(), key=f"manual_date_{name}")
+        with m2:
+            manual_time = st.text_input("時間", value="08:00", key=f"manual_time_{name}")
+        with m3:
+            manual_count = st.number_input("補登次數", min_value=0, max_value=999, step=1, key=f"manual_count_{name}")
+
+        if st.button("補登這筆紀錄", key=f"manual_btn_{name}"):
+            if manual_count > 0:
+                add_manual_record(str(manual_date), name, int(manual_count), manual_time)
+                st.success(f"✅ 已補登 {manual_date}：{int(manual_count)} 次")
+                st.rerun()
+            else:
+                st.warning("請輸入補登次數。")
+
+        st.markdown("</div>", unsafe_allow_html=True)
+
+        # 迴向文
         ded_key = f"ded_{name}"
         if ded_key not in st.session_state:
             st.session_state[ded_key] = False
 
-        col_ded, _ = st.columns([3, 1])
-        with col_ded:
-            dlabel = "▲ 收起迴向文" if st.session_state[ded_key] else "▼ 展開迴向文"
-            if st.button(dlabel, key=f"ded_btn_{name}"):
-                st.session_state[ded_key] = not st.session_state[ded_key]
-                st.rerun()
+        if st.button("▲ 收起迴向文" if st.session_state[ded_key] else "▼ 展開迴向文", key=f"ded_btn_{name}"):
+            st.session_state[ded_key] = not st.session_state[ded_key]
+            st.rerun()
 
         if st.session_state[ded_key]:
-            st.markdown(f"""
-            <div class="dedication-box">
-              <div class="dedication-header">
-                <div class="dedication-header-line"></div>
-                <div class="dedication-header-text">🪔 迴向文</div>
-                <div class="dedication-header-line"></div>
-              </div>{info["dedication"]}</div>
-            """, unsafe_allow_html=True)
+            st.markdown(f'<div class="dedication-box">{info["dedication"]}</div>', unsafe_allow_html=True)
 
-        # ── records ──
-        st.markdown(f"""
-        <div class="pcard" style="padding:16px 18px">
-          <div class="sec-label">打卡紀錄</div>
-        """, unsafe_allow_html=True)
+        # 紀錄列表
+        st.markdown('<div class="pcard" style="padding:16px 18px"><div class="sec-label">打卡紀錄</div>', unsafe_allow_html=True)
 
         df_all = load_data()
         df_this = df_all[df_all["經文"] == name].copy()
@@ -824,7 +770,6 @@ for i, (name, info) in enumerate(PRACTICES.items()):
             if sel_date:
                 df_show = df_show[df_show["日期"] == str(sel_date)]
 
-            df_show["時間"] = df_show["時間"].fillna("").astype(str).str.replace("nan", "", regex=False).str.strip()
             df_show = df_show.sort_values(["日期", "時間", "id"], ascending=False).reset_index(drop=True)
 
             total_f = int(df_show["次數"].sum())
@@ -845,7 +790,6 @@ for i, (name, info) in enumerate(PRACTICES.items()):
             </div>
             """, unsafe_allow_html=True)
 
-            # ── 表頭 ──
             hc1, hc2, hc3, hc4 = st.columns([3, 2, 2, 1])
             hc1.markdown('<div style="font-size:12px;font-weight:600;color:#AFA196;padding:4px 0">日期</div>', unsafe_allow_html=True)
             hc2.markdown('<div style="font-size:12px;font-weight:600;color:#AFA196;padding:4px 0">時間</div>', unsafe_allow_html=True)
@@ -853,7 +797,6 @@ for i, (name, info) in enumerate(PRACTICES.items()):
             hc4.markdown('<div style="font-size:12px;font-weight:600;color:#AFA196;padding:4px 0"></div>', unsafe_allow_html=True)
             st.markdown('<hr style="margin:2px 0 6px;border:none;border-top:1px solid #E8E0D2">', unsafe_allow_html=True)
 
-            # ── 每筆資料 ──
             confirm_key = f"confirm_{name}"
             if confirm_key not in st.session_state:
                 st.session_state[confirm_key] = None
@@ -864,27 +807,18 @@ for i, (name, info) in enumerate(PRACTICES.items()):
                 rc1.markdown(f'<div style="font-size:13px;padding:6px 0;color:#3A2D24">{row["日期"]}</div>', unsafe_allow_html=True)
                 rc2.markdown(f'<div style="font-size:13px;padding:6px 0;color:#7A6050">{row["時間"] or "—"}</div>', unsafe_allow_html=True)
                 rc3.markdown(f'<div style="font-size:13px;padding:6px 0;font-weight:600;color:{ac}">{int(row["次數"])}</div>', unsafe_allow_html=True)
+
                 with rc4:
                     if st.session_state[confirm_key] == record_id:
-                        st.markdown('<div style="font-size:11px;color:#C0392B;padding:2px 0">確定？</div>', unsafe_allow_html=True)
-                        cc1, cc2 = st.columns(2)
-                        with cc1:
-                            if st.button("✓", key=f"yes_{name}_{record_id}", help="確認刪除"):
-                                delete_row(record_id)
-                                st.session_state[confirm_key] = None
-                                st.rerun()
-                        with cc2:
-                            if st.button("✗", key=f"no_{name}_{record_id}", help="取消"):
-                                st.session_state[confirm_key] = None
-                                st.rerun()
+                        if st.button("確刪", key=f"yes_{name}_{record_id}", help="確認刪除"):
+                            delete_row(record_id)
+                            st.session_state[confirm_key] = None
+                            st.rerun()
                     else:
                         if st.button("🗑", key=f"del_{name}_{record_id}", help="刪除此筆"):
                             st.session_state[confirm_key] = record_id
                             st.rerun()
 
-            st.markdown('<hr style="margin:6px 0 10px;border:none;border-top:1px solid #E8E0D2">', unsafe_allow_html=True)
-
-            st.markdown('<div class="dl-wrap">', unsafe_allow_html=True)
             export_df = df_show[["日期", "時間", "經文", "次數"]].copy()
             st.download_button(
                 "⬇ 下載 CSV",
@@ -894,6 +828,5 @@ for i, (name, info) in enumerate(PRACTICES.items()):
                 use_container_width=True,
                 key=f"dl_{name}",
             )
-            st.markdown("</div>", unsafe_allow_html=True)
 
-        st.markdown("</div>", unsafe_allow_html=True)  # close pcard
+        st.markdown("</div>", unsafe_allow_html=True)
