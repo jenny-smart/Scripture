@@ -748,14 +748,31 @@ for i, (name, info) in enumerate(PRACTICES.items()):
         if st.session_state[ded_key]:
             st.markdown(f'<div class="dedication-box">{info["dedication"]}</div>', unsafe_allow_html=True)
 
-        # 紀錄列表
+        # 紀錄列表：預設收合，打開後才顯示篩選與資料列
         st.markdown('<div class="pcard" style="padding:16px 18px"><div class="sec-label">打卡紀錄</div>', unsafe_allow_html=True)
 
         df_all = load_data()
         df_this = df_all[df_all["經文"] == name].copy()
 
+        records_open_key = f"records_open_{name}"
+        if records_open_key not in st.session_state:
+            st.session_state[records_open_key] = False
+
+        total_records = len(df_this)
+        open_label = "▲ 收起打卡紀錄" if st.session_state[records_open_key] else f"▼ 查詢打卡紀錄（共 {total_records} 筆）"
+        if st.button(open_label, key=f"records_toggle_{name}"):
+            st.session_state[records_open_key] = not st.session_state[records_open_key]
+            st.rerun()
+
         if df_this.empty:
             st.markdown('<div style="font-size:13px;color:#AFA196;padding:4px 0">尚無記錄</div>', unsafe_allow_html=True)
+
+        elif not st.session_state[records_open_key]:
+            st.markdown(
+                '<div style="font-size:13px;color:#AFA196;padding:4px 0">紀錄已收合，點上方按鈕後可依月份、日期與顯示筆數查詢。</div>',
+                unsafe_allow_html=True,
+            )
+
         else:
             fc1, fc2 = st.columns(2)
             with fc1:
@@ -764,64 +781,91 @@ for i, (name, info) in enumerate(PRACTICES.items()):
             with fc2:
                 sel_date = st.date_input("指定日期", value=None, key=f"fd_{name}")
 
-            df_show = df_this.copy()
+            fc3, fc4 = st.columns([1, 1])
+            with fc3:
+                show_count = st.selectbox(
+                    "顯示筆數",
+                    [30, 50, 100, 200, "全部"],
+                    index=0,
+                    key=f"show_count_{name}",
+                )
+            with fc4:
+                st.markdown(
+                    '<div style="font-size:12px;color:#AFA196;padding-top:30px">先篩選，再限制顯示筆數</div>',
+                    unsafe_allow_html=True,
+                )
+
+            df_filtered = df_this.copy()
             if sel_month != "全部":
-                df_show = df_show[df_show["日期"].str.startswith(sel_month)]
+                df_filtered = df_filtered[df_filtered["日期"].str.startswith(sel_month)]
             if sel_date:
-                df_show = df_show[df_show["日期"] == str(sel_date)]
+                df_filtered = df_filtered[df_filtered["日期"] == str(sel_date)]
 
-            df_show = df_show.sort_values(["日期", "時間", "id"], ascending=False).reset_index(drop=True)
+            df_filtered = df_filtered.sort_values(["日期", "時間", "id"], ascending=False).reset_index(drop=True)
 
-            total_f = int(df_show["次數"].sum())
+            if show_count == "全部":
+                df_show = df_filtered.copy()
+            else:
+                df_show = df_filtered.head(int(show_count)).copy()
+
+            total_f = int(df_filtered["次數"].sum()) if not df_filtered.empty else 0
             st.markdown(f"""
             <div class="rpill-row">
               <div class="rpill">
                 <div class="rpill-num" style="color:{ac}">{total_f}</div>
-                <div class="rpill-lbl">總次數</div>
+                <div class="rpill-lbl">篩選總次數</div>
               </div>
               <div class="rpill">
-                <div class="rpill-num" style="color:{ac}">{df_show["日期"].nunique()}</div>
-                <div class="rpill-lbl">天數</div>
+                <div class="rpill-num" style="color:{ac}">{df_filtered["日期"].nunique()}</div>
+                <div class="rpill-lbl">篩選天數</div>
               </div>
               <div class="rpill">
-                <div class="rpill-num" style="color:{ac}">{len(df_show)}</div>
-                <div class="rpill-lbl">筆數</div>
+                <div class="rpill-num" style="color:{ac}">{len(df_filtered)}</div>
+                <div class="rpill-lbl">篩選筆數</div>
               </div>
             </div>
             """, unsafe_allow_html=True)
 
-            hc1, hc2, hc3, hc4 = st.columns([3, 2, 2, 1])
-            hc1.markdown('<div style="font-size:12px;font-weight:600;color:#AFA196;padding:4px 0">日期</div>', unsafe_allow_html=True)
-            hc2.markdown('<div style="font-size:12px;font-weight:600;color:#AFA196;padding:4px 0">時間</div>', unsafe_allow_html=True)
-            hc3.markdown('<div style="font-size:12px;font-weight:600;color:#AFA196;padding:4px 0">次數</div>', unsafe_allow_html=True)
-            hc4.markdown('<div style="font-size:12px;font-weight:600;color:#AFA196;padding:4px 0"></div>', unsafe_allow_html=True)
-            st.markdown('<hr style="margin:2px 0 6px;border:none;border-top:1px solid #E8E0D2">', unsafe_allow_html=True)
+            st.markdown(
+                f'<div style="font-size:13px;color:#AFA196;padding:2px 0 10px">目前顯示 {len(df_show)} 筆，共符合 {len(df_filtered)} 筆。</div>',
+                unsafe_allow_html=True,
+            )
 
-            confirm_key = f"confirm_{name}"
-            if confirm_key not in st.session_state:
-                st.session_state[confirm_key] = None
+            if df_show.empty:
+                st.markdown('<div style="font-size:13px;color:#AFA196;padding:4px 0">這個條件下沒有紀錄</div>', unsafe_allow_html=True)
+            else:
+                hc1, hc2, hc3, hc4 = st.columns([3, 2, 2, 1])
+                hc1.markdown('<div style="font-size:12px;font-weight:600;color:#AFA196;padding:4px 0">日期</div>', unsafe_allow_html=True)
+                hc2.markdown('<div style="font-size:12px;font-weight:600;color:#AFA196;padding:4px 0">時間</div>', unsafe_allow_html=True)
+                hc3.markdown('<div style="font-size:12px;font-weight:600;color:#AFA196;padding:4px 0">次數</div>', unsafe_allow_html=True)
+                hc4.markdown('<div style="font-size:12px;font-weight:600;color:#AFA196;padding:4px 0"></div>', unsafe_allow_html=True)
+                st.markdown('<hr style="margin:2px 0 6px;border:none;border-top:1px solid #E8E0D2">', unsafe_allow_html=True)
 
-            for _, row in df_show.iterrows():
-                record_id = int(row["id"])
-                rc1, rc2, rc3, rc4 = st.columns([3, 2, 2, 1])
-                rc1.markdown(f'<div style="font-size:13px;padding:6px 0;color:#3A2D24">{row["日期"]}</div>', unsafe_allow_html=True)
-                rc2.markdown(f'<div style="font-size:13px;padding:6px 0;color:#7A6050">{row["時間"] or "—"}</div>', unsafe_allow_html=True)
-                rc3.markdown(f'<div style="font-size:13px;padding:6px 0;font-weight:600;color:{ac}">{int(row["次數"])}</div>', unsafe_allow_html=True)
+                confirm_key = f"confirm_{name}"
+                if confirm_key not in st.session_state:
+                    st.session_state[confirm_key] = None
 
-                with rc4:
-                    if st.session_state[confirm_key] == record_id:
-                        if st.button("確刪", key=f"yes_{name}_{record_id}", help="確認刪除"):
-                            delete_row(record_id)
-                            st.session_state[confirm_key] = None
-                            st.rerun()
-                    else:
-                        if st.button("🗑", key=f"del_{name}_{record_id}", help="刪除此筆"):
-                            st.session_state[confirm_key] = record_id
-                            st.rerun()
+                for _, row in df_show.iterrows():
+                    record_id = int(row["id"])
+                    rc1, rc2, rc3, rc4 = st.columns([3, 2, 2, 1])
+                    rc1.markdown(f'<div style="font-size:13px;padding:6px 0;color:#3A2D24">{row["日期"]}</div>', unsafe_allow_html=True)
+                    rc2.markdown(f'<div style="font-size:13px;padding:6px 0;color:#7A6050">{row["時間"] or "—"}</div>', unsafe_allow_html=True)
+                    rc3.markdown(f'<div style="font-size:13px;padding:6px 0;font-weight:600;color:{ac}">{int(row["次數"])}</div>', unsafe_allow_html=True)
 
-            export_df = df_show[["日期", "時間", "經文", "次數"]].copy()
+                    with rc4:
+                        if st.session_state[confirm_key] == record_id:
+                            if st.button("確刪", key=f"yes_{name}_{record_id}", help="確認刪除"):
+                                delete_row(record_id)
+                                st.session_state[confirm_key] = None
+                                st.rerun()
+                        else:
+                            if st.button("🗑", key=f"del_{name}_{record_id}", help="刪除此筆"):
+                                st.session_state[confirm_key] = record_id
+                                st.rerun()
+
+            export_df = df_filtered[["日期", "時間", "經文", "次數"]].copy()
             st.download_button(
-                "⬇ 下載 CSV",
+                "⬇ 下載目前篩選結果 CSV",
                 export_df.to_csv(index=False, encoding="utf-8-sig"),
                 file_name=f"{name}_打卡記錄_{today_tw()}.csv",
                 mime="text/csv",
