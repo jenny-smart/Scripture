@@ -10,7 +10,6 @@ TZ = ZoneInfo("Asia/Taipei")
 DB_FILE = "records.db"
 OLD_CSV_FILE = Path("records.csv")
 GOAL = 1000
-SHEET_TAB_NAME = "records"
 
 # ============================================================
 # 時間
@@ -120,61 +119,53 @@ def delete_sqlite(record_id):
 
 
 # ============================================================
-# Google Sheet 永久資料庫
+# Supabase 永久資料庫
 # ============================================================
 
-def sheet_enabled():
-    return "gcp_service_account" in st.secrets and "GOOGLE_SHEET_ID" in st.secrets
+def supabase_enabled():
+    return "SUPABASE_URL" in st.secrets and "SUPABASE_KEY" in st.secrets
 
 @st.cache_resource(ttl=300)
-def get_worksheet():
-    import gspread
+def get_supabase_client():
+    from supabase import create_client
+    return create_client(st.secrets["SUPABASE_URL"], st.secrets["SUPABASE_KEY"])
 
-    creds = dict(st.secrets["gcp_service_account"])
-    sheet_id = st.secrets["GOOGLE_SHEET_ID"]
+def load_supabase():
+    sb = get_supabase_client()
+    result = (
+        sb.table("records")
+        .select("id,date,time,scripture,count")
+        .order("date", desc=True)
+        .order("time", desc=True)
+        .order("id", desc=True)
+        .execute()
+    )
 
-    gc = gspread.service_account_from_dict(creds)
-    sh = gc.open_by_key(sheet_id)
-
-    try:
-        ws = sh.worksheet(SHEET_TAB_NAME)
-    except Exception:
-        ws = sh.add_worksheet(title=SHEET_TAB_NAME, rows=1000, cols=5)
-        ws.append_row(["日期", "時間", "經文", "次數"])
-
-    values = ws.get_all_values()
-    if not values:
-        ws.append_row(["日期", "時間", "經文", "次數"])
-    elif values[0][:4] != ["日期", "時間", "經文", "次數"]:
-        ws.insert_row(["日期", "時間", "經文", "次數"], 1)
-
-    return ws
-
-def load_sheet():
-    ws = get_worksheet()
-    rows = ws.get_all_records()
-
+    rows = result.data or []
     if not rows:
         return pd.DataFrame(columns=["id", "日期", "時間", "經文", "次數"])
 
     df = pd.DataFrame(rows)
-
-    for col in ["日期", "時間", "經文", "次數"]:
-        if col not in df.columns:
-            df[col] = ""
-
-    # Google Sheet 沒有 SQLite id，所以用實際列號當 id。
-    # 第 1 列是表頭，資料從第 2 列開始。
-    df["id"] = range(2, len(df) + 2)
+    df = df.rename(columns={
+        "date": "日期",
+        "time": "時間",
+        "scripture": "經文",
+        "count": "次數",
+    })
     return normalize_df(df[["id", "日期", "時間", "經文", "次數"]])
 
-def add_sheet(date_str, time_str, name, count):
-    ws = get_worksheet()
-    ws.append_row([date_str, time_str, name, int(count)], value_input_option="USER_ENTERED")
+def add_supabase(date_str, time_str, name, count):
+    sb = get_supabase_client()
+    sb.table("records").insert({
+        "date": str(date_str),
+        "time": str(time_str),
+        "scripture": str(name),
+        "count": int(count),
+    }).execute()
 
-def delete_sheet(row_number):
-    ws = get_worksheet()
-    ws.delete_rows(int(row_number))
+def delete_supabase(record_id):
+    sb = get_supabase_client()
+    sb.table("records").delete().eq("id", int(record_id)).execute()
 
 
 # ============================================================
@@ -195,14 +186,15 @@ def normalize_df(df):
     df["經文"] = df["經文"].astype(str).str.strip()
     df["次數"] = pd.to_numeric(df["次數"], errors="coerce").fillna(0).astype(int)
     df = df[df["次數"] > 0].copy()
+
     return df[["id", "日期", "時間", "經文", "次數"]]
 
 def load_data():
-    if sheet_enabled():
+    if supabase_enabled():
         try:
-            return load_sheet()
+            return load_supabase()
         except Exception as e:
-            st.warning(f"Google Sheet 讀取失敗，目前改用本機 SQLite 備援：{e}")
+            st.warning(f"Supabase 讀取失敗，目前改用本機 SQLite 備援：{e}")
             return load_sqlite()
     return load_sqlite()
 
@@ -210,12 +202,12 @@ def add_record(date_str, time_str, name, count):
     if count <= 0:
         return
 
-    if sheet_enabled():
+    if supabase_enabled():
         try:
-            add_sheet(date_str, time_str, name, count)
+            add_supabase(date_str, time_str, name, count)
             return
         except Exception as e:
-            st.warning(f"Google Sheet 寫入失敗，暫時寫入本機 SQLite：{e}")
+            st.warning(f"Supabase 寫入失敗，暫時寫入本機 SQLite：{e}")
 
     add_sqlite(date_str, time_str, name, count)
 
@@ -227,12 +219,12 @@ def add_manual_record(date_str, name, count, time_str="08:00"):
     add_record(str(date_str), str(time_str or "08:00"), name, int(count))
 
 def delete_row(record_id):
-    if sheet_enabled():
+    if supabase_enabled():
         try:
-            delete_sheet(record_id)
+            delete_supabase(record_id)
             return
         except Exception as e:
-            st.warning(f"Google Sheet 刪除失敗，請稍後再試：{e}")
+            st.warning(f"Supabase 刪除失敗，請稍後再試：{e}")
             return
 
     delete_sqlite(record_id)
@@ -275,17 +267,16 @@ def migrate_csv_to_sqlite_once():
     conn.commit()
     conn.close()
 
-def migrate_sqlite_to_sheet_once():
-    """第一次設定好 Google Sheet 後，可按畫面按鈕把 SQLite 現有資料搬到 Sheet。"""
-    if not sheet_enabled():
+def migrate_sqlite_to_supabase_once():
+    """第一次設定好 Supabase 後，可按畫面按鈕把 SQLite 現有資料搬到 Supabase。"""
+    if not supabase_enabled():
         return 0
 
     df_sqlite = load_sqlite()
     if df_sqlite.empty:
         return 0
 
-    ws = get_worksheet()
-    existing = load_sheet()
+    existing = load_supabase()
 
     count = 0
     for _, row in df_sqlite.iterrows():
@@ -295,12 +286,11 @@ def migrate_sqlite_to_sheet_once():
             & (existing["經文"] == row["經文"])
             & (existing["次數"] == int(row["次數"]))
         ]
+
         if same.empty:
-            ws.append_row(
-                [row["日期"], row["時間"], row["經文"], int(row["次數"])],
-                value_input_option="USER_ENTERED",
-            )
+            add_supabase(row["日期"], row["時間"], row["經文"], int(row["次數"]))
             count += 1
+
     return count
 
 
@@ -583,16 +573,16 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-if sheet_enabled():
-    st.success("✅ 目前使用 Google Sheet 永久儲存。")
+if supabase_enabled():
+    st.success("✅ 目前使用 Supabase 永久儲存。")
     with st.expander("資料搬移工具"):
-        st.caption("如果你本機 SQLite 還有舊資料，可以按一次搬到 Google Sheet。")
-        if st.button("將 SQLite 舊資料搬到 Google Sheet"):
-            n = migrate_sqlite_to_sheet_once()
-            st.success(f"已搬移 {n} 筆資料到 Google Sheet。")
+        st.caption("如果你本機 SQLite 還有舊資料，可以按一次搬到 Supabase。")
+        if st.button("將 SQLite 舊資料搬到 Supabase"):
+            n = migrate_sqlite_to_supabase_once()
+            st.success(f"已搬移 {n} 筆資料到 Supabase。")
             st.rerun()
 else:
-    st.warning("⚠️ 目前尚未設定 Google Sheet，暫時使用本機 SQLite。Streamlit Cloud 重啟後資料仍可能消失。")
+    st.warning("⚠️ 目前尚未設定 Supabase，暫時使用本機 SQLite。Streamlit Cloud 重啟後資料仍可能消失。")
 
 
 # ============================================================
