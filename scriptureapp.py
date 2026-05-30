@@ -360,14 +360,19 @@ st.set_page_config(page_title="讀誦打卡", page_icon="🪷", layout="centered
 
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;500;600;700;900&family=Noto+Sans+TC:wght@300;400;500;700&display=swap');
-
 html, body, [data-testid="stAppViewContainer"] { background: #F2EDE4 !important; }
 .block-container { padding-top: 0 !important; padding-bottom: 3rem !important; max-width: 580px !important; }
 
 * { box-sizing: border-box; }
-body, p, div, span, label {
-    font-family: 'Noto Sans TC', sans-serif !important;
+body, p, div, span, label, input, button, textarea {
+    font-family:
+        -apple-system,
+        BlinkMacSystemFont,
+        "PingFang TC",
+        "Microsoft JhengHei",
+        "Heiti TC",
+        "Noto Sans TC",
+        sans-serif !important;
     color: #3A2D24;
 }
 
@@ -533,8 +538,13 @@ button[data-baseweb="tab"][aria-selected="true"] {
     border: none !important; color: #fff !important;
     height: 52px !important; font-size: 16px !important;
 }
+/* 數字輸入框：把 + / - 放到左方，數字仍維持正常顯示 */
+[data-testid="stNumberInput"] {
+    direction: rtl;
+}
 [data-testid="stNumberInput"] input {
-    font-family: 'Noto Serif TC', serif !important;
+    direction: ltr;
+    font-family: "PingFang TC", "Microsoft JhengHei", "Noto Serif TC", serif !important;
     font-size: 22px !important; font-weight: 700 !important;
     background: #FDFAF5 !important;
     border: 1.5px solid #D9D0C4 !important;
@@ -680,7 +690,7 @@ for i, (name, info) in enumerate(PRACTICES.items()):
         # 今日打卡
         st.markdown('<div class="pcard" style="padding:16px 18px"><div class="sec-label">今日打卡</div>', unsafe_allow_html=True)
 
-        ci1, ci2 = st.columns([1, 2])
+        ci1, ci2 = st.columns([1.3, 1.7])
         with ci1:
             count_val = st.number_input(
                 "次數",
