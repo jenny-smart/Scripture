@@ -696,6 +696,8 @@ for i, (name, info) in enumerate(PRACTICES.items()):
                 if count_val > 0:
                     add_count(name, int(count_val))
                     st.success(f"✅ 已記錄 {int(count_val)} 次")
+                    # 歸零
+                    st.session_state[f"ni_{name}"] = 0
                     st.rerun()
                 else:
                     st.warning("請先輸入次數再記錄。")
