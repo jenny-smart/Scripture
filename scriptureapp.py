@@ -678,6 +678,13 @@ for i, (name, info) in enumerate(PRACTICES.items()):
         # 今日打卡
         st.markdown('<div class="pcard" style="padding:16px 18px"><div class="sec-label">今日打卡</div>', unsafe_allow_html=True)
 
+        # 若上一輪已完成打卡，這一輪先把輸入框歸零，再建立 number_input
+        count_key = f"ni_{name}"
+        reset_count_key = f"reset_count_{name}"
+        if st.session_state.get(reset_count_key, False):
+            st.session_state[count_key] = 0
+            st.session_state[reset_count_key] = False
+
         ci1, ci2 = st.columns([1.3, 1.7])
         with ci1:
             count_val = st.number_input(
@@ -686,7 +693,7 @@ for i, (name, info) in enumerate(PRACTICES.items()):
                 max_value=999,
                 value=0,
                 step=1,
-                key=f"ni_{name}",
+                key=count_key,
                 label_visibility="collapsed",
             )
 
@@ -696,8 +703,9 @@ for i, (name, info) in enumerate(PRACTICES.items()):
                 if count_val > 0:
                     add_count(name, int(count_val))
                     st.success(f"✅ 已記錄 {int(count_val)} 次")
-                    # 歸零
-                    st.session_state[f"ni_{name}"] = 0
+
+                    # 完成後歸零，避免同一個次數被誤送第二次
+                    st.session_state[reset_count_key] = True
                     st.rerun()
                 else:
                     st.warning("請先輸入次數再記錄。")
@@ -708,18 +716,27 @@ for i, (name, info) in enumerate(PRACTICES.items()):
         # 補登紀錄
         st.markdown('<div class="pcard" style="padding:16px 18px"><div class="sec-label">補登紀錄</div>', unsafe_allow_html=True)
 
+        manual_count_key = f"manual_count_{name}"
+        reset_manual_count_key = f"reset_manual_count_{name}"
+        if st.session_state.get(reset_manual_count_key, False):
+            st.session_state[manual_count_key] = 0
+            st.session_state[reset_manual_count_key] = False
+
         m1, m2, m3 = st.columns([1.4, 1, 1])
         with m1:
             manual_date = st.date_input("補登日期", value=today_tw(), key=f"manual_date_{name}")
         with m2:
             manual_time = st.text_input("時間", value="08:00", key=f"manual_time_{name}")
         with m3:
-            manual_count = st.number_input("補登次數", min_value=0, max_value=999, step=1, key=f"manual_count_{name}")
+            manual_count = st.number_input("補登次數", min_value=0, max_value=999, step=1, key=manual_count_key)
 
         if st.button("補登這筆紀錄", key=f"manual_btn_{name}"):
             if manual_count > 0:
                 add_manual_record(str(manual_date), name, int(manual_count), manual_time)
                 st.success(f"✅ 已補登 {manual_date}：{int(manual_count)} 次")
+
+                # 補登完成後歸零，避免重複送出
+                st.session_state[reset_manual_count_key] = True
                 st.rerun()
             else:
                 st.warning("請輸入補登次數。")
