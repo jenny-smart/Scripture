@@ -37,6 +37,101 @@ SCRIPTURE_CH = "懺悔三昧，每天念三遍，不要小看。\n\n無論是過
 
 DEDICATION_CH = "─── 迴向文 ───\n\n弟子（或信士）○○○願以此（讀誦《懺悔三昧》）之功德，\n迴向給弟子累生累世的冤親債主、歷代宗親。\n\n祈請（主尊，如：南無大慈大悲觀世音菩薩 / 地藏王菩薩）\n慈悲作主，超拔他們，\n令業障消除、離苦得樂、往生善處。\n\n願弟子與累世冤親債主解冤釋結、\n善緣增長，同生淨土。\n\n（念誦三遍）"
 
+SCRIPTURE_SS = """《壽生經》
+
+貞觀十三年。有唐三藏法師，往西天教。因檢大藏經，見生經一卷，有十二相屬。
+南贍部洲生下為人，先於冥司下，各借壽生錢，有注命官。
+祇揖人道，見今庫藏空間，催南贍部洲眾生，交納壽生錢。
+阿難又問世尊：南贍部洲眾生，多有大願，不能納得。
+佛言道：教看金剛經、壽生經，能折本命錢，為祇證經力甚大。
+若眾生不納壽生錢，睡中驚，眠夢顛倒，三魂杳杳，七魄幽幽，微生空中。
+其亡人語話相逐，攝人魂魄，減人精神，為欠壽生錢。
+
+若善男子、善女人，破旁納得壽生錢，免得身邊一十八般橫災：
+
+第一遠路波陌內
+第二遠路風雹雨打之災
+第三過江渡河落水之災
+第四牆倒屋塌之災
+第五火光之災
+第六血光之災
+第七勞病之炎
+第八疥癩之災
+第九咽喉閉塞之災
+第十落馬傷人之災
+第十一車輾之災
+第十二破傷風死之災
+第十三產難之災
+第十四橫死之災
+第十五卒中風病之災
+第十六天行時氣之災
+第十七投井自繫之災
+第十八官事口舌之災
+
+若有善男子善女人納得壽生錢，免了身邊一十八般橫災。
+若有人不納不折壽生錢，後世為人，多注貧賤，壽命不長，醜陋不堪，多饒殘疾。
+但看注壽生經，又名授生經，真經不虛，除了身邊災，免了身邊禍。
+
+又說十地菩薩：
+長壽王菩薩摩訶薩
+延壽王菩薩摩訶薩
+增福壽菩薩摩訶薩
+消災障菩薩摩訶薩
+救苦難觀世音菩薩摩訶薩
+長安菩薩摩訶薩
+長歡喜菩薩摩訶薩
+解冤結菩薩摩訶薩
+福壽王菩薩摩訶薩
+延壽長菩薩摩訶薩
+
+本宅龍神土地罪消滅。滿宅眷罪消滅。惡口浪舌罪消滅。殺生害命罪消滅。
+前生冤業消滅。今生冤業罪消滅。前生父母罪消滅。今生父罪消滅。
+
+又說災星：
+金星、木星、水星、火星、土星、太陽星、太陰星、羅睺星、計都星、紫炁星、月孛星。
+懺悔已後，願災星不照，福旦長臨，四時無病，八節無災。
+
+若有善男子善女人，早納壽生錢，分明解說，漏貫薄消，納在庫中，庫官收付。
+至百年命終之後，七七已前，早燒取壽生錢，救度三世父母、七代先亡、九族冤魂，皆得生天。
+儒流學士、僧尼道俗，或貴或賤，三世富貴。
+今生不燒三世貧賤，後世難得人身。
+縱得為人，瘸手瘸足，無目跛腰，痴聾瘖瘂，衣不蓋形，食不充口，被人輕賤。
+若早燒壽生錢，注衣注食，注命注祿。
+本命星官、本命判官、修羅王事、天龍八部，聞佛所說，皆大歡喜，信受奉行。
+
+壽生經，即說咒曰：
+天羅咒。地羅咒。日月黃羅咒。一切冤家離我身。摩訶般若波羅蜜。
+
+一解冤經。二延壽真言。三滅五逆之罪。
+誦此經，免地獄之罪，便得生天不虛矣。
+
+三皈依：
+自皈依佛　當願眾生　體解大道　發無上心
+自皈依法　當願眾生　深入經藏　智慧如海
+自皈依僧　當願眾生　統理大眾　一切無礙　和南聖眾
+
+迴向偈：
+願以此功德　普及於一切
+誦經還庫藏　消災增福壽
+"""
+
+DEDICATION_SS = """─── 迴向文 ───
+
+願以此讀誦《壽生經》功德，
+迴向給弟子（您的名字）、歷代祖先、累世冤親債主，
+以及法界一切有情眾生。
+
+願消災延壽、福慧增長，
+身心安樂、所求吉祥，
+業障消除、善緣增長。
+
+願一切眾生離苦得樂，
+同霑法益，同生淨土。
+
+南無阿彌陀佛。
+
+（念誦三遍）"""
+
 PRACTICES = {
     "高王觀世音經": {
         "icon": "🙏",
@@ -49,6 +144,7 @@ PRACTICES = {
         "dot_done": "dot-done-p",
         "dot_today": "dot-today-p",
         "btn_cls": "btn-p",
+        "card_cls": "pcard-p",
     },
     "懺悔三昧": {
         "icon": "🪷",
@@ -61,6 +157,20 @@ PRACTICES = {
         "dot_done": "dot-done-t",
         "dot_today": "dot-today-t",
         "btn_cls": "btn-t",
+        "card_cls": "pcard-t",
+    },
+    "壽生經": {
+        "icon": "📜",
+        "subtitle": "每日持誦　消災增福壽",
+        "scripture": SCRIPTURE_SS,
+        "dedication": DEDICATION_SS,
+        "c_accent": "#B45309",
+        "c_light": "#FEF3C7",
+        "c_mid": "#FCD34D",
+        "dot_done": "dot-done-s",
+        "dot_today": "dot-today-s",
+        "btn_cls": "btn-s",
+        "card_cls": "pcard-s",
     },
 }
 
@@ -422,6 +532,7 @@ button[data-baseweb="tab"][aria-selected="true"] {
 .pcard::before { content: ''; position: absolute; top:0; left:0; right:0; height: 3px; }
 .pcard-p::before { background: linear-gradient(90deg, #4A4585, #8883C0, #4A4585); }
 .pcard-t::before { background: linear-gradient(90deg, #0D9488, #34D399, #0D9488); }
+.pcard-s::before { background: linear-gradient(90deg, #B45309, #F59E0B, #B45309); }
 
 .hero-wrap {
     display: flex; align-items: center; gap: 14px;
@@ -479,8 +590,10 @@ button[data-baseweb="tab"][aria-selected="true"] {
 .dot-empty   { background: #EDE5D8; color: #C4B9AD; }
 .dot-done-p  { background: #4A4585; color: #F5F0FF; box-shadow: 0 2px 6px rgba(74,69,133,.35); }
 .dot-done-t  { background: #0D9488; color: #ECFDF5; box-shadow: 0 2px 6px rgba(13,148,136,.3); }
+.dot-done-s  { background: #B45309; color: #FFF7ED; box-shadow: 0 2px 6px rgba(180,83,9,.3); }
 .dot-today-p { background: #EDEAF5; color: #3D3880; border: 2px solid #5B56A0; font-weight:900; }
 .dot-today-t { background: #D1FAF5; color: #0F766E; border: 2px solid #0D9488; font-weight:900; }
+.dot-today-s { background: #FEF3C7; color: #92400E; border: 2px solid #B45309; font-weight:900; }
 
 .scripture-box {
     background: #FDFAF5;
@@ -538,6 +651,11 @@ button[data-baseweb="tab"][aria-selected="true"] {
     border: none !important; color: #fff !important;
     height: 52px !important; font-size: 16px !important;
 }
+.btn-s .stButton > button {
+    background: linear-gradient(135deg, #B45309, #78350F) !important;
+    border: none !important; color: #fff !important;
+    height: 52px !important; font-size: 16px !important;
+}
 /* 數字輸入框：把 + / - 放到左方，數字仍維持正常顯示 */
 [data-testid="stNumberInput"] {
     direction: rtl;
@@ -587,10 +705,10 @@ st.markdown(f"""
 # Main UI
 # ============================================================
 
-tabs = st.tabs(["🙏 高王觀世音經", "🪷 懺悔三昧"])
+tabs = st.tabs([f"{info['icon']} {name}" for name, info in PRACTICES.items()])
 
 for i, (name, info) in enumerate(PRACTICES.items()):
-    card_cls = "pcard pcard-t" if i == 1 else "pcard pcard-p"
+    card_cls = f"pcard {info['card_cls']}"
     ac = info["c_accent"]
     lc = info["c_light"]
 
